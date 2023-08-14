@@ -44,11 +44,9 @@ import android.widget.ArrayAdapter
 import android.widget.CompoundButton
 import android.widget.CompoundButton.OnCheckedChangeListener
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
-import androidx.navigation.fragment.navArgs
 import com.example.android.camera.utils.OrientationLiveData
 import com.example.android.camera.utils.getPreviewOutputSize
 import com.samsung.android.scan3d.CameraActivity
@@ -75,7 +73,7 @@ class CameraFragment : Fragment() {
     private val fragmentCameraBinding get() = _fragmentCameraBinding!!
 
     /** AndroidX navigation arguments */
-  //  private val args: CameraFragmentArgs by navArgs()
+    //  private val args: CameraFragmentArgs by navArgs()
 
     var resW = 1280
     var resH = 720
@@ -90,8 +88,10 @@ class CameraFragment : Fragment() {
     /** Detects, characterizes, and connects to a CameraDevice (used for all camera operations) */
     private lateinit var cameraManager: CameraManager
 
-    private lateinit var cameraList  :List<SelectorFragment.Companion.FormatItem>
-    private lateinit var selectedCameraId : String
+    private lateinit var cameraList: List<SelectorFragment.Companion.FormatItem>
+    private lateinit var selectedCameraId: String
+    private var quality: Int = 80
+
     /** [CameraCharacteristics] corresponding to the provided Camera ID */
     private lateinit var characteristics: CameraCharacteristics
 
@@ -110,7 +110,7 @@ class CameraFragment : Fragment() {
     private lateinit var camera: CameraDevice
 
     /** Internal reference to the ongoing [CameraCaptureSession] configured with our parameters */
-    private  var session: CameraCaptureSession? = null
+    private var session: CameraCaptureSession? = null
 
     /** Live data listener for changes in the device orientation relative to the camera */
     private lateinit var relativeOrientation: OrientationLiveData
@@ -124,8 +124,8 @@ class CameraFragment : Fragment() {
         return fragmentCameraBinding.root
     }
 
-    fun recomp(view: View){
-        run{
+    fun recomp(view: View) {
+        run {
 
             val outputFormats = characteristics.get(
                 CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
@@ -145,12 +145,20 @@ class CameraFragment : Fragment() {
             spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             // Set the adapter for the Spinner
             spinner!!.adapter = spinnerAdapter
+
+            var selIndex = 0
+            for (formatIndex in 0 until outputFormats.size) {
+                if (outputFormats[formatIndex].height <= 720) {
+                    selIndex = formatIndex
+                }
+            }
+            spinner.setSelection(selIndex)
             spinner.onItemSelectedListener = object : OnItemSelectedListener {
                 override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
                     resW = outputFormats[p2].width
                     resH = outputFormats[p2].height
                     Log.i("CAMERA", "onItemSelected " + resW)
-                    if (session!=null) {
+                    if (session != null) {
                         view.post { initializeCamera() }
                     }
                 }
@@ -175,28 +183,57 @@ class CameraFragment : Fragment() {
     }
 
 
-
     @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         Log.i("onViewCreated", "onViewCreated")
 
         /** Detects, characterizes, and connects to a CameraDevice (used for all camera operations) */
-        cameraManager = run{
+        cameraManager = run {
             val context = requireContext().applicationContext
             context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         }
 
-         cameraList  = SelectorFragment.enumerateCameras(cameraManager)
-         selectedCameraId= cameraList[0].cameraId
+        cameraList = SelectorFragment.enumerateCameras(cameraManager)
+        selectedCameraId = cameraList[0].cameraId
         /** [CameraCharacteristics] corresponding to the provided Camera ID */
-       characteristics =
+        characteristics =
             cameraManager.getCameraCharacteristics(selectedCameraId)
 
 
+        run {
+            val spinner = fragmentCameraBinding.spinnerQua
+            val spinnerDataList = ArrayList<Any>()
+            val quals = arrayOf(1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
+            quals.forEach { spinnerDataList.add(it.toString()) }
+            // Initialize the ArrayAdapter
+            val spinnerAdapter =
+                ArrayAdapter(
+                    requireContext(),
+                    android.R.layout.simple_spinner_item,
+                    spinnerDataList
+                )
+            // Set the dropdown layout style
+            spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            // Set the adapter for the Spinner
+            spinner!!.adapter = spinnerAdapter
+            spinner.setSelection(8)
+            spinner.onItemSelectedListener = object : OnItemSelectedListener {
+                override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                    quality = quals[p2]
+                    Log.i("CAMERA", "onItemSelected " + quality)
+                    if (session != null) {
+                        view.post { initializeCamera() }
+                    }
+                }
+
+                override fun onNothingSelected(p0: AdapterView<*>?) {
+                }
+            }
+        }
 
 
-        run{
+        run {
             val spinner = fragmentCameraBinding.spinnerCam
             val spinnerDataList = ArrayList<Any>()
             cameraList.forEach { spinnerDataList.add(it.title) }
@@ -213,8 +250,8 @@ class CameraFragment : Fragment() {
             spinner!!.adapter = spinnerAdapter
             spinner.onItemSelectedListener = object : OnItemSelectedListener {
                 override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                   selectedCameraId = cameraList[p2].cameraId
-                    characteristics=   cameraManager.getCameraCharacteristics(selectedCameraId)
+                    selectedCameraId = cameraList[p2].cameraId
+                    characteristics = cameraManager.getCameraCharacteristics(selectedCameraId)
                     Log.i("CAMERA", "onItemSelected " + resW)
 
 
@@ -229,14 +266,14 @@ class CameraFragment : Fragment() {
 
 
 
-       recomp(view)
+        recomp(view)
 
 
         fragmentCameraBinding.switch1?.setOnCheckedChangeListener(object : OnCheckedChangeListener {
             override fun onCheckedChanged(p0: CompoundButton?, p1: Boolean) {
                 showLive = p1
                 Log.i("CAMERA", "show live " + p1)
-                if (session!=null) {
+                if (session != null) {
                     view.post { initializeCamera() }
                 }
             }
@@ -245,7 +282,7 @@ class CameraFragment : Fragment() {
             override fun onCheckedChanged(p0: CompoundButton?, p1: Boolean) {
                 enableStream = p1
                 Log.i("CAMERA", "enableStream " + p1)
-                if (session!=null) {
+                if (session != null) {
                     view.post { initializeCamera() }
                 }
             }
@@ -285,20 +322,20 @@ class CameraFragment : Fragment() {
         })
 
 
-
     }
 
 
-    private fun stopRunning(){
-        if (session!=null) {
+    private fun stopRunning() {
+        if (session != null) {
             Log.i("CAMERA", "close")
             session!!.stopRepeating()
             session!!.close()
-            session=null
+            session = null
             camera.close()
             imageReader.close()
         }
     }
+
     /**
      * Begin all camera operations in a coroutine in the main thread. This function:
      * - Opens the camera
@@ -317,10 +354,10 @@ class CameraFragment : Fragment() {
         val size = characteristics.get(
             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
         )!!
-            .getOutputSizes( ImageFormat.JPEG).maxByOrNull { it.height * it.width }!!
+            .getOutputSizes(ImageFormat.JPEG).maxByOrNull { it.height * it.width }!!
 
         imageReader = ImageReader.newInstance(
-            resW, resH,  ImageFormat.JPEG, IMAGE_BUFFER_SIZE
+            resW, resH, ImageFormat.JPEG, IMAGE_BUFFER_SIZE
         )
 
         // Creates list of Surfaces where the camera will output frames
@@ -352,13 +389,15 @@ class CameraFragment : Fragment() {
 
         }
         captureRequest.addTarget(imageReader.surface)
-        captureRequest.set(CaptureRequest.JPEG_QUALITY, 80)
+        captureRequest.set(CaptureRequest.JPEG_QUALITY, quality.toByte())
         // This will keep sending the capture request as frequently as possible until the
         // session is torn down or session.stopRepeating() is called
 
         var lastTime = System.currentTimeMillis()
 
         var encoding = false
+
+        var kodd = 0
         session!!.setRepeatingRequest(
             captureRequest.build(),
             object : CameraCaptureSession.CaptureCallback() {
@@ -388,7 +427,7 @@ class CameraFragment : Fragment() {
                     }
 
                     var curTime = System.currentTimeMillis()
-                //    Log.i("TIME", "" + (curTime - lastTime))
+                    //    Log.i("TIME", "" + (curTime - lastTime))
                     lastTime = curTime
 
 
@@ -396,6 +435,7 @@ class CameraFragment : Fragment() {
 
                     // Convert to jpeg
                     if (enableStream) {
+                        kodd += 1
 
                         /*
                         encoding=true
@@ -420,6 +460,16 @@ class CameraFragment : Fragment() {
 
                         val buffer = img.planes[0].buffer
                         val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
+
+                        if (kodd % 10 == 0) {
+                            activity?.runOnUiThread(Runnable {
+                                // Stuff that updates the UI
+                                fragmentCameraBinding.qualFeedback?.text =
+                                    " " + (30 * bytes.size / 1000) + "kB/sec"
+                            })
+
+                        }
+
                         (activity as CameraActivity?)?.http?.channel?.trySend(bytes)
                         img.close()
                     } else {

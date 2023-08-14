@@ -65,7 +65,7 @@ class SelectorFragment : Fragment() {
                     Navigation.findNavController(requireActivity(), R.id.fragment_container)
                         .navigate(
                             SelectorFragmentDirections.actionSelectorToCamera(
-                                item.cameraId, item.format
+                                //item.cameraId, item.format
                             )
                         )
                 }
@@ -210,11 +210,17 @@ class SelectorFragment : Fragment() {
                 val vfov =(( 2.0*(180.0 / 3.141592) * atan(sensorSize.height / (2.0 * foaclmm))).roundToInt().toString()+"°").padEnd(4,' ')
 
                 // All cameras *must* support JPEG output so we don't need to check characteristics
-                availableCameras.add(
-                    FormatItem(
-                        "vfov:$vfov $foc $ape $orientation id:$id", id, ImageFormat.JPEG
+
+                val title=  "vfov:$vfov $foc $ape $orientation"
+                if(!availableCameras.any {it-> it.title==title } ){
+                    availableCameras.add(
+                        FormatItem(
+                            title, id, ImageFormat.JPEG
+                        )
                     )
-                )
+                }
+
+
 
             }
 

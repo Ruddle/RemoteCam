@@ -27,7 +27,7 @@
 
         <action
             android:id="@+id/action_permissions_to_selector"
-            app:destination="@id/selector_fragment"
+            app:destination="@id/camera_fragment"
             app:popUpTo="@id/permissions_fragment"
             app:popUpToInclusive="true" />
 
@@ -50,15 +50,15 @@
         android:name="com.samsung.android.scan3d.fragments.CameraFragment"
         android:label="Camera" >
 
-        <argument
-            android:name="camera_id"
-            app:argType="string"
-            app:nullable="false"/>
+<!--        <argument-->
+<!--            android:name="camera_id"-->
+<!--            app:argType="string"-->
+<!--            app:nullable="true"/>-->
 
-        <argument
-            android:name="pixel_format"
-            app:argType="integer"
-            app:nullable="false"/>
+<!--        <argument-->
+<!--            android:name="pixel_format"-->
+<!--            app:argType="integer"-->
+<!--            app:nullable="true"/>-->
 
         <action
             android:id="@+id/action_camera_to_permissions"

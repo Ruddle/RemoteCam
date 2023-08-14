@@ -37,132 +37,199 @@
                 android:layout_weight="1" />
         </FrameLayout>
 
-        <TableLayout
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:padding="4pt">
+            android:layout_weight="1" >
 
-            <TableRow
+            <TableLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:overScrollMode="ifContentScrolls"
+                android:padding="4pt">
 
-                <TextView
-                    android:id="@+id/textView"
-                    android:layout_width="147dp"
-                    android:layout_height="wrap_content"
-
-                    android:text="RemoteCam" />
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <View
-                    android:id="@+id/divider"
+                <TableRow
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginVertical="4pt"
-                    android:background="#FFAA00"
-                    android:paddingTop="5pt" />
-
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="4dp"
-                android:background="#393939"
-                android:padding="4dp">
-
-                <Switch
-                    android:id="@+id/switch1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    android:checked="true"
-                    android:text="Live Preview"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-                    android:textColor="#C1C1C1" />
-
-                <Switch
-                    android:id="@+id/switch2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    android:checked="false"
-                    android:text="Enable Stream"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-                    android:textColor="#C1C1C1" />
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="4dp"
-                android:background="#393939"
-                android:padding="4dp">
-
-                <TextView
-                    android:id="@+id/textView4"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Sensor"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
-
-                <Spinner
-                    android:id="@+id/spinnerCam"
-                    android:layout_width="131dp"
-                    android:layout_height="48dp" />
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="4dp"
-                android:background="#393939"
-                android:padding="4dp">
-
-                <TextView
-                    android:id="@+id/textView3"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Resolution"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
-
-                <Spinner
-                    android:id="@+id/spinnerRes"
-                    android:layout_width="131dp"
-                    android:layout_height="48dp" />
-
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="4dp"
-                android:background="#393939"
-                android:padding="4dp">
-
-                <TextView
-                    android:id="@+id/textView5"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="IPs" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical">
+                    android:layout_height="match_parent">
 
                     <TextView
-                        android:id="@+id/textView6"
+                        android:id="@+id/textView"
+                        android:layout_width="147dp"
+                        android:layout_height="wrap_content"
+
+                        android:text="RemoteCam" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <View
+                        android:id="@+id/divider"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="4pt"
+                        android:background="#FFAA00"
+                        android:paddingTop="5pt" />
+
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginBottom="4dp"
+                    android:background="#393939"
+                    android:padding="4dp">
+
+                    <Switch
+                        android:id="@+id/switch1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:layout_gravity="left"
+                        android:checked="true"
+                        android:splitTrack="false"
+                        android:text="Preview"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                        android:textColor="#C1C1C1" />
+
+                    <Switch
+                        android:id="@+id/switch2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:layout_gravity="left"
+                        android:checked="false"
+                        android:text="Stream"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                        android:textColor="#C1C1C1" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginBottom="4dp"
+                    android:background="#393939"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/textView4"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="0.0.0.0:8080/cam.mjpeg" />
-                </LinearLayout>
+                        android:text="Sensor"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
-            </TableRow>
-        </TableLayout>
+                    <Spinner
+                        android:id="@+id/spinnerCam"
+                        android:layout_width="131dp"
+                        android:layout_height="48dp" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginBottom="4dp"
+                    android:background="#393939"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/textView3"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Resolution"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
+                    <Spinner
+                        android:id="@+id/spinnerRes"
+                        android:layout_width="131dp"
+                        android:layout_height="48dp" />
+
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginBottom="4dp"
+                    android:background="#393939"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/textView42"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:text="Quality"
+                        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
+                    <LinearLayout
+                        android:layout_width="131dp"
+                        android:layout_height="48dp"
+                        android:orientation="horizontal">
+
+                        <Spinner
+                            android:id="@+id/spinnerQua"
+                            android:layout_width="95dp"
+                            android:layout_height="48dp" />
+
+                        <TextView
+                            android:id="@+id/qual_feedback"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginBottom="4dp"
+                    android:background="#393939"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/textView5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="IPs" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/textView6"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="0.0.0.0:8080/cam.mjpeg" />
+                    </LinearLayout>
+
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginBottom="4dp"
+                    android:layout_weight="1"
+                    android:background="#393939"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/textView7"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        android:id="@+id/textView2"
+                        android:layout_width="107dp"
+                        android:layout_height="wrap_content"
+                        android:text="https://github.com/Ruddle/RemoteCam" />
+                </TableRow>
+
+
+            </TableLayout>
+        </ScrollView>
 
     </LinearLayout>
 
