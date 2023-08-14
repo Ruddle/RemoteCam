@@ -22,4 +22,4 @@ Let me know your interest for a turnkey virtual webcam or OBS plugin.
 There is already an alternative, Droidcam, but it is not free for HD resolution 720p+.
 Also Droidcam cannot use the telephoto lens on Samsung devices.
 
-RemoteCam is an opensource alternadtive to Droidcam (but with <10% of its functionalities). 
+RemoteCam is an opensource alternative to Droidcam (but with <10% of its functionalities). 
