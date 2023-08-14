@@ -110,7 +110,7 @@ class CameraFragment : Fragment() {
     private lateinit var camera: CameraDevice
 
     /** Internal reference to the ongoing [CameraCaptureSession] configured with our parameters */
-    private lateinit var session: CameraCaptureSession
+    private  var session: CameraCaptureSession? = null
 
     /** Live data listener for changes in the device orientation relative to the camera */
     private lateinit var relativeOrientation: OrientationLiveData
@@ -150,7 +150,7 @@ class CameraFragment : Fragment() {
                     resW = outputFormats[p2].width
                     resH = outputFormats[p2].height
                     Log.i("CAMERA", "onItemSelected " + resW)
-                    if (::session.isInitialized) {
+                    if (session!=null) {
                         view.post { initializeCamera() }
                     }
                 }
@@ -162,10 +162,24 @@ class CameraFragment : Fragment() {
 
     }
 
+    override fun onPause() {
+        super.onPause()
+        Log.i("onPause", "onPause")
+        stopRunning()
+
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.i("onResume", "onResume")
+    }
+
+
+
     @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        Log.i("onViewCreated", "onViewCreated")
 
         /** Detects, characterizes, and connects to a CameraDevice (used for all camera operations) */
         cameraManager = run{
@@ -222,7 +236,7 @@ class CameraFragment : Fragment() {
             override fun onCheckedChanged(p0: CompoundButton?, p1: Boolean) {
                 showLive = p1
                 Log.i("CAMERA", "show live " + p1)
-                if (::session.isInitialized) {
+                if (session!=null) {
                     view.post { initializeCamera() }
                 }
             }
@@ -231,7 +245,7 @@ class CameraFragment : Fragment() {
             override fun onCheckedChanged(p0: CompoundButton?, p1: Boolean) {
                 enableStream = p1
                 Log.i("CAMERA", "enableStream " + p1)
-                if (::session.isInitialized) {
+                if (session!=null) {
                     view.post { initializeCamera() }
                 }
             }
@@ -274,6 +288,17 @@ class CameraFragment : Fragment() {
 
     }
 
+
+    private fun stopRunning(){
+        if (session!=null) {
+            Log.i("CAMERA", "close")
+            session!!.stopRepeating()
+            session!!.close()
+            session=null
+            camera.close()
+            imageReader.close()
+        }
+    }
     /**
      * Begin all camera operations in a coroutine in the main thread. This function:
      * - Opens the camera
@@ -283,13 +308,7 @@ class CameraFragment : Fragment() {
      */
     private fun initializeCamera() = lifecycleScope.launch(Dispatchers.Main) {
         Log.i("CAMERA", "initializeCamera")
-        if (::session.isInitialized) {
-            Log.i("CAMERA", "close")
-            session.stopRepeating()
-            session.close()
-            camera.close()
-            imageReader.close()
-        }
+        stopRunning()
         fragmentCameraBinding.viewFinder.setAspectRatio(resW, resH)
         // Open the selected camera
         camera = openCamera(cameraManager, selectedCameraId, cameraHandler)
@@ -340,7 +359,7 @@ class CameraFragment : Fragment() {
         var lastTime = System.currentTimeMillis()
 
         var encoding = false
-        session.setRepeatingRequest(
+        session!!.setRepeatingRequest(
             captureRequest.build(),
             object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureCompleted(
@@ -369,7 +388,7 @@ class CameraFragment : Fragment() {
                     }
 
                     var curTime = System.currentTimeMillis()
-                    Log.i("TIME", "" + (curTime - lastTime))
+                //    Log.i("TIME", "" + (curTime - lastTime))
                     lastTime = curTime
 
 
