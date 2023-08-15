@@ -47,7 +47,7 @@
 
     <fragment
         android:id="@+id/camera_fragment"
-        android:name="com.samsung.android.scan3d.fragments.CameraFragment"
+        android:name="com.samsung.android.scan3d.fragments.CameraFragment2"
         android:label="Camera" >
 
 <!--        <argument-->

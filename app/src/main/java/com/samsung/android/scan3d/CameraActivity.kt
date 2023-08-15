@@ -16,32 +16,91 @@
 
 package com.samsung.android.scan3d
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.samsung.android.scan3d.databinding.ActivityCameraBinding
 import com.samsung.android.scan3d.http.HttpService
+import com.samsung.android.scan3d.serv.Cam
+import kotlinx.coroutines.channels.Channel
+
 
 class CameraActivity : AppCompatActivity() {
 
     private lateinit var activityCameraBinding: ActivityCameraBinding
-    lateinit var http: HttpService
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        activityCameraBinding = ActivityCameraBinding.inflate(layoutInflater)
-        setContentView(activityCameraBinding.root)
-        http = HttpService()
-        http.main()
+    var hasFor = false
+
+
+    private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            finish()
+      //      android.os.Process.killProcess(android.os.Process.myPid())
+        }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        Log.i("CAMERAACTIVITY", "CAMERAACTIVITY onCreate")
+        activityCameraBinding = ActivityCameraBinding.inflate(layoutInflater)
+        setContentView(activityCameraBinding.root)
+
+        sendCam {
+            it.action = "start"
+        }
+
+        registerReceiver(receiver, IntentFilter("KILL"))
+        hasFor = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sendCam {
+            it.action = "onPause"
+        }
+    }
+
+
+    fun sendCam(extra: (Intent) -> Unit) {
+        var intent = Intent(this, Cam::class.java)
+        extra(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (hasFor) {
+            sendCam {
+                it.action = "stop"
+            }
+        }
+        unregisterReceiver(receiver)
+
+    }
 
     override fun onResume() {
         super.onResume()
         // Before setting full screen flags, we must wait a bit to let UI settle; otherwise, we may
         // be trying to set app to immersive mode before it's ready and the flags do not stick
-        activityCameraBinding.fragmentContainer.postDelayed({
-            activityCameraBinding.fragmentContainer.systemUiVisibility = FLAGS_FULLSCREEN
-        }, IMMERSIVE_FLAG_TIMEOUT)
+
+        /*   activityCameraBinding.fragmentContainer.postDelayed({
+               activityCameraBinding.fragmentContainer.systemUiVisibility = FLAGS_FULLSCREEN
+           }, IMMERSIVE_FLAG_TIMEOUT)
+   */
+        sendCam {
+            it.action = "onResume"
+        }
     }
 
     companion object {

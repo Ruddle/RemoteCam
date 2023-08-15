@@ -28,7 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import com.samsung.android.scan3d.R
 
 private const val PERMISSIONS_REQUEST_CODE = 10
-private val PERMISSIONS_REQUIRED = arrayOf(Manifest.permission.CAMERA)
+private val PERMISSIONS_REQUIRED = arrayOf(Manifest.permission.CAMERA, Manifest.permission.INTERNET, Manifest.permission.FOREGROUND_SERVICE,Manifest.permission.POST_NOTIFICATIONS)
 
 /**
  * This [Fragment] requests permissions and, once granted, it will navigate to the next fragment

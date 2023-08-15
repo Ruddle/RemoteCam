@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
 apply plugin: "androidx.navigation.safeargs"
 
-
+apply plugin: 'kotlin-parcelize'
 
 android {
     compileSdkVersion 33
@@ -92,4 +91,6 @@ dependencies {
 
     implementation "io.ktor:ktor-server-core:2.3.3"
     implementation "io.ktor:ktor-server-netty:2.3.3"
+
+    //implementation files("../libs/libjpeg-turbo-release.aar")
 }

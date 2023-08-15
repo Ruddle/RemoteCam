@@ -38,4 +38,4 @@ if [ -n "$first_new_device" ]; then
 fi
 sudo modprobe --remove v4l2loopback
 
-#-vf "format=yuv420p, transpose=1" -r 30 -c:v copy  -pix_fmt yuyv422
+#-vf "format=yuv420p, transpose=1" -r 30 -c:v copy  -pix_fmt yuyv422 ,hflip

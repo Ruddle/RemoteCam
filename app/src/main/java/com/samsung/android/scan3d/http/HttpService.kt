@@ -26,6 +26,9 @@ class HttpService {
     public fun main() {
         engine = embeddedServer(Netty, port = 8080) {
             routing {
+                get("/cam") {
+                    call.respondText("Ok")
+                }
                 get("/cam.mjpeg") {
                     call.respondOutputStream(
                         ContentType.parse("multipart/x-mixed-replace;boundary=FRAME"),
@@ -36,4 +39,20 @@ class HttpService {
         }
         engine.start(wait = false)
     }
+
+
+
+    companion object{
+
+
+        sealed class FromHttp {
+
+            data class NewChannel(
+                val channel: Channel<ByteArray>
+            ) : FromHttp()
+            object Delivered : FromHttp()
+
+        }
+    }
+
 }

@@ -49,7 +49,6 @@ import androidx.navigation.NavController
 import androidx.navigation.Navigation
 import com.example.android.camera.utils.OrientationLiveData
 import com.example.android.camera.utils.getPreviewOutputSize
-import com.samsung.android.scan3d.CameraActivity
 import com.samsung.android.scan3d.R
 import com.samsung.android.scan3d.databinding.FragmentCameraBinding
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +70,10 @@ class CameraFragment : Fragment() {
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
 
     private val fragmentCameraBinding get() = _fragmentCameraBinding!!
+    /** Host's navigation controller */
+    private val navController: NavController by lazy {
+        Navigation.findNavController(requireActivity(), R.id.fragment_container)
+    }
 
     /** AndroidX navigation arguments */
     //  private val args: CameraFragmentArgs by navArgs()
@@ -80,15 +83,12 @@ class CameraFragment : Fragment() {
     var showLive = true
     var enableStream = false
 
-    /** Host's navigation controller */
-    private val navController: NavController by lazy {
-        Navigation.findNavController(requireActivity(), R.id.fragment_container)
-    }
+
 
     /** Detects, characterizes, and connects to a CameraDevice (used for all camera operations) */
     private lateinit var cameraManager: CameraManager
 
-    private lateinit var cameraList: List<SelectorFragment.Companion.FormatItem>
+    private lateinit var cameraList: List<SelectorFragment.Companion.SensorDesc>
     private lateinit var selectedCameraId: String
     private var quality: Int = 80
 
@@ -345,6 +345,8 @@ class CameraFragment : Fragment() {
      */
     private fun initializeCamera() = lifecycleScope.launch(Dispatchers.Main) {
         Log.i("CAMERA", "initializeCamera")
+
+
         stopRunning()
         fragmentCameraBinding.viewFinder.setAspectRatio(resW, resH)
         // Open the selected camera
@@ -409,7 +411,7 @@ class CameraFragment : Fragment() {
                     super.onCaptureCompleted(session, request, result)
 
                     var lastImg = imageReader.acquireNextImage()
-                    while (lastImg != null) {
+                 /*   while (lastImg != null) {
                         val next = imageReader.acquireNextImage()
                         if (next == null) {
                             break;
@@ -417,7 +419,7 @@ class CameraFragment : Fragment() {
                             lastImg.close()
                             lastImg = next
                         }
-                    }
+                    } */
                     // val img = imageReader.acquireNextImage() ?: return
                     val img = lastImg ?: return
 
@@ -427,50 +429,54 @@ class CameraFragment : Fragment() {
                     }
 
                     var curTime = System.currentTimeMillis()
-                    //    Log.i("TIME", "" + (curTime - lastTime))
+                    val delta = curTime - lastTime
+                    Log.i("TIME", "" + (delta))
                     lastTime = curTime
 
 
                     // Convert to jpeg
 
                     // Convert to jpeg
+
+                    kodd += 1
+
+                    /*
+                    encoding=true
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        val yuvImage = toYuvImage(img)
+                        val width: Int = img.getWidth()
+                        val height: Int = img.getHeight()
+                        var jpegImage: ByteArray? = null
+                        ByteArrayOutputStream().use { out ->
+                            yuvImage!!.compressToJpeg(Rect(0, 0, width, height), 80, out)
+                            jpegImage = out.toByteArray()
+
+                            (activity as CameraActivity?)?.http?.channel?.trySend(jpegImage!!)
+
+                            img.close()
+                            encoding=false
+                        }
+
+
+                    }
+                    */
+
+                    val buffer = img.planes[0].buffer
+                    val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
+
+                    if (kodd % 10 == 0) {
+                        activity?.runOnUiThread(Runnable {
+                            // Stuff that updates the UI
+                            fragmentCameraBinding.qualFeedback?.text =
+                                " " + (30 * bytes.size / 1000) + "kB/sec"
+
+                            fragmentCameraBinding.ftFeedback?.text =
+                                " " + delta + "ms"
+                        })
+
+                    }
                     if (enableStream) {
-                        kodd += 1
-
-                        /*
-                        encoding=true
-                        lifecycleScope.launch(Dispatchers.Main) {
-                            val yuvImage = toYuvImage(img)
-                            val width: Int = img.getWidth()
-                            val height: Int = img.getHeight()
-                            var jpegImage: ByteArray? = null
-                            ByteArrayOutputStream().use { out ->
-                                yuvImage!!.compressToJpeg(Rect(0, 0, width, height), 80, out)
-                                jpegImage = out.toByteArray()
-
-                                (activity as CameraActivity?)?.http?.channel?.trySend(jpegImage!!)
-
-                                img.close()
-                                encoding=false
-                            }
-
-
-                        }
-                        */
-
-                        val buffer = img.planes[0].buffer
-                        val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
-
-                        if (kodd % 10 == 0) {
-                            activity?.runOnUiThread(Runnable {
-                                // Stuff that updates the UI
-                                fragmentCameraBinding.qualFeedback?.text =
-                                    " " + (30 * bytes.size / 1000) + "kB/sec"
-                            })
-
-                        }
-
-                        (activity as CameraActivity?)?.http?.channel?.trySend(bytes)
+                     //   (activity as CameraActivity?)?.http?.channel?.trySend(bytes)
                         img.close()
                     } else {
                         img.close()
@@ -484,6 +490,77 @@ class CameraFragment : Fragment() {
 
 
     }
+
+
+    suspend fun initializeCamera0() {
+        Log.i("CAMERA", "initializeCamera")
+        stopRunning()
+        fragmentCameraBinding.viewFinder.setAspectRatio(resW, resH)
+        camera = openCamera(cameraManager, selectedCameraId, cameraHandler)
+        imageReader = ImageReader.newInstance(
+            resW, resH, ImageFormat.JPEG, IMAGE_BUFFER_SIZE
+        )
+        var targets = listOf(imageReader.surface)
+        if (showLive) {
+            targets = targets.plus(fragmentCameraBinding.viewFinder.holder.surface)
+        }
+        session = createCaptureSession(camera, targets, cameraHandler)
+        val captureRequest = camera.createCaptureRequest(
+            CameraDevice.TEMPLATE_PREVIEW
+        )
+        if (showLive) {
+            captureRequest.addTarget(fragmentCameraBinding.viewFinder.holder.surface)
+        }
+        captureRequest.addTarget(imageReader.surface)
+        captureRequest.set(CaptureRequest.JPEG_QUALITY, quality.toByte())
+        var lastTime = System.currentTimeMillis()
+
+        var encoding = false
+
+        var kodd = 0
+        session!!.setRepeatingRequest(
+            captureRequest.build(),
+            object : CameraCaptureSession.CaptureCallback() {
+                override fun onCaptureCompleted(
+                    session: CameraCaptureSession,
+                    request: CaptureRequest,
+                    result: TotalCaptureResult
+                ) {
+                    super.onCaptureCompleted(session, request, result)
+                    var lastImg = imageReader.acquireNextImage()
+                    val img = lastImg ?: return
+                    if (encoding) {
+                        img.close()
+                        return
+                    }
+                    var curTime = System.currentTimeMillis()
+                    val delta = curTime - lastTime
+                    Log.i("TIME", "" + (delta))
+                    lastTime = curTime
+                    kodd += 1
+                    val buffer = img.planes[0].buffer
+                    val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
+                    if (kodd % 10 == 0) {
+                        activity?.runOnUiThread(Runnable {
+                            // Stuff that updates the UI
+                            fragmentCameraBinding.qualFeedback?.text =
+                                " " + (30 * bytes.size / 1000) + "kB/sec"
+                            fragmentCameraBinding.ftFeedback?.text =
+                                " " + delta + "ms"
+                        })
+                    }
+                    if (enableStream) {
+                 //       (activity as CameraActivity?)?.http?.channel?.trySend(bytes)
+                    }
+                    img.close()
+                }
+            },
+            cameraHandler
+        )
+
+    }
+
+
 
     /** Opens the camera and returns the opened device (as the result of the suspend coroutine) */
     @SuppressLint("MissingPermission")

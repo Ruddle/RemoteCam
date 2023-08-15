@@ -23,6 +23,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.os.Bundle
+import android.os.Parcelable
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -34,6 +35,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.android.camera.utils.GenericListAdapter
 import com.samsung.android.scan3d.R
+import kotlinx.parcelize.Parcelize
 import java.lang.Exception
 import kotlin.math.atan
 import kotlin.math.roundToInt
@@ -77,7 +79,8 @@ class SelectorFragment : Fragment() {
     companion object {
 
         /** Helper class used as a data holder for each selectable camera format item */
-        data class FormatItem(val title: String, val cameraId: String, val format: Int)
+        @Parcelize
+        data class SensorDesc(val title: String, val cameraId: String, val format: Int) : Parcelable
 
         /** Helper function used to convert a lens orientation enum into a human-readable string */
         private fun lensOrientationString(value: Int) = when (value) {
@@ -123,8 +126,8 @@ class SelectorFragment : Fragment() {
         }
 
         @SuppressLint("InlinedApi")
-        fun enumerateCameras(cameraManager: CameraManager): List<FormatItem> {
-            val availableCameras: MutableList<FormatItem> = mutableListOf()
+        fun enumerateCameras(cameraManager: CameraManager): List<SensorDesc> {
+            val availableCameras: MutableList<SensorDesc> = mutableListOf()
 
             // Get list of all compatible cameras
             val cameraIds = mutableListOf<String>()
@@ -214,7 +217,7 @@ class SelectorFragment : Fragment() {
                 val title=  "vfov:$vfov $foc $ape $orientation"
                 if(!availableCameras.any {it-> it.title==title } ){
                     availableCameras.add(
-                        FormatItem(
+                        SensorDesc(
                             title, id, ImageFormat.JPEG
                         )
                     )
