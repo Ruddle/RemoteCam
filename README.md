@@ -6,6 +6,10 @@ The app allows a user to choose a sensor and a resolution. From there it capture
 
 ![app screenshot](assets/screen.jpg)
 
+# Download
+[RemoteCam.apk](https://github.com/Ruddle/RemoteCam/releases/tag/0.03)
+It is not available on the Play Store. Please do not upload it there.
+
 # Use cases
 You can use that stream in **OBS** with the *Media Source* or the *Browser* (lower latency) source: (change ip to your phone's)
 
