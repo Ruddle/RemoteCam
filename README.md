@@ -7,7 +7,8 @@ The app allows a user to choose a sensor and a resolution. From there it capture
 ![app screenshot](assets/screen.jpg)
 
 # Download
-[RemoteCam.apk](https://github.com/Ruddle/RemoteCam/releases/tag/0.03)
+[RemoteCam.apk](https://github.com/Ruddle/RemoteCam/releases/tag/0.04)
+
 It is not available on the Play Store. Please do not upload it there.
 
 # Use cases
