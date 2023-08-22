@@ -1,6 +1,6 @@
 # RemoteCam
 Your android camera streamed on your desktop: use as a source for OBS, or as a webcam with v4l2.
-
+Free✅, No Ads✅, Open Source✅
 # How it works
 The app allows a user to choose a sensor and a resolution. From there it captures every frame as JPEG and push them to a connected http client as a MJPEG stream.
 

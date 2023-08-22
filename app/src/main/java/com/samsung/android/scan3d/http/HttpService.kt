@@ -40,19 +40,4 @@ class HttpService {
         engine.start(wait = false)
     }
 
-
-
-    companion object{
-
-
-        sealed class FromHttp {
-
-            data class NewChannel(
-                val channel: Channel<ByteArray>
-            ) : FromHttp()
-            object Delivered : FromHttp()
-
-        }
-    }
-
 }

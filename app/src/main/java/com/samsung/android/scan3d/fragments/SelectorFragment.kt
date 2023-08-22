@@ -40,41 +40,8 @@ import java.lang.Exception
 import kotlin.math.atan
 import kotlin.math.roundToInt
 
-class SelectorFragment : Fragment() {
+class SelectorFragment {
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? = RecyclerView(requireContext())
-
-    @SuppressLint("MissingPermission")
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        view as RecyclerView
-        view.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-
-            val cameraManager =
-                requireContext().getSystemService(Context.CAMERA_SERVICE) as CameraManager
-
-            val cameraList = enumerateCameras(cameraManager)
-
-            val layoutId = android.R.layout.simple_list_item_1
-            adapter = GenericListAdapter(cameraList, itemLayoutId = layoutId) { view, item, _ ->
-                view.findViewById<TextView>(android.R.id.text1).text = item.title
-                view.setOnClickListener {
-                    Navigation.findNavController(requireActivity(), R.id.fragment_container)
-                        .navigate(
-                            SelectorFragmentDirections.actionSelectorToCamera(
-                                //item.cameraId, item.format
-                            )
-                        )
-                }
-            }
-        }
-
-    }
 
     companion object {
 
@@ -91,7 +58,6 @@ class SelectorFragment : Fragment() {
         }
 
         /** Helper function used to list all compatible cameras and supported pixel formats */
-
 
         fun getCapStringAtIndex(index: Int): String {
             val strings = listOf(
