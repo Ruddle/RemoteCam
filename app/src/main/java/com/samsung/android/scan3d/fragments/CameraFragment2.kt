@@ -21,19 +21,17 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.ImageFormat
-import android.hardware.camera2.CameraCharacteristics
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.SurfaceHolder
 import android.view.View
-import android.view.View.OnClickListener
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.CompoundButton
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
@@ -42,8 +40,9 @@ import com.samsung.android.scan3d.CameraActivity
 import com.samsung.android.scan3d.R
 import com.samsung.android.scan3d.databinding.FragmentCamera2Binding
 import com.samsung.android.scan3d.serv.CamEngine
+import com.samsung.android.scan3d.util.ClipboardUtil
+import com.samsung.android.scan3d.util.IpUtil
 import kotlinx.parcelize.Parcelize
-
 
 class CameraFragment2 : Fragment() {
 
@@ -77,6 +76,16 @@ class CameraFragment2 : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _fragmentCameraBinding = FragmentCamera2Binding.inflate(inflater, container, false)
+
+        // Get the local ip address
+        val localIp = IpUtil.getLocalIpAddress()
+        _fragmentCameraBinding!!.textView6.text = "$localIp:8080/cam.mjpeg"
+        _fragmentCameraBinding!!.textView6.setOnClickListener {
+            // Copy the ip address to the clipboard
+            ClipboardUtil.copyToClipboard(context, "ip", _fragmentCameraBinding!!.textView6.text.toString())
+            // Toast to notify the user
+            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+        }
 
         Cac = (activity as CameraActivity?)!!
         return fragmentCameraBinding.root
