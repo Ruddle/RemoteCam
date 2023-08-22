@@ -35,13 +35,11 @@ import kotlinx.coroutines.channels.Channel
 class CameraActivity : AppCompatActivity() {
 
     private lateinit var activityCameraBinding: ActivityCameraBinding
-    var hasFor = false
-
 
     private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             finish()
-      //      android.os.Process.killProcess(android.os.Process.myPid())
+            //      android.os.Process.killProcess(android.os.Process.myPid())
         }
     }
 
@@ -54,14 +52,15 @@ class CameraActivity : AppCompatActivity() {
             it.action = "start"
         }
         registerReceiver(receiver, IntentFilter("KILL"))
-        hasFor = true
     }
+
     override fun onPause() {
         super.onPause()
         sendCam {
             it.action = "onPause"
         }
     }
+
     fun sendCam(extra: (Intent) -> Unit) {
         var intent = Intent(this, Cam::class.java)
         extra(intent)
@@ -71,16 +70,15 @@ class CameraActivity : AppCompatActivity() {
             startService(intent)
         }
     }
+
     override fun onDestroy() {
         super.onDestroy()
-        if (hasFor) {
-            sendCam {
-                it.action = "stop"
-            }
+        sendCam {
+            it.action = "stop"
         }
         unregisterReceiver(receiver)
-
     }
+
     override fun onResume() {
         super.onResume()
         sendCam {

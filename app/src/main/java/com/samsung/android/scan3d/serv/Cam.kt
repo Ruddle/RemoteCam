@@ -15,7 +15,7 @@ import android.view.Surface
 import androidx.core.app.NotificationCompat
 import com.samsung.android.scan3d.CameraActivity
 import com.samsung.android.scan3d.R
-import com.samsung.android.scan3d.fragments.CameraFragment2
+import com.samsung.android.scan3d.fragments.CameraFragment
 import com.samsung.android.scan3d.http.HttpService
 import kotlinx.coroutines.runBlocking
 
@@ -67,7 +67,7 @@ class Cam : Service() {
                         .setSmallIcon(R.drawable.ic_linked_camera).addAction(R.drawable.ic_close, "Kill",pendingIntentKill)
                         .setContentIntent(pendingIntent)
 
-                //.setFullScreenIntent(pendingIntent,true)
+
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     //      builer?.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
@@ -101,12 +101,12 @@ class Cam : Service() {
             "new_view_state" -> {
 
                 val old = engine?.viewState!!
-                val new : CameraFragment2.Companion.ViewState = intent.extras?.getParcelable("data")!!
+                val new : CameraFragment.Companion.ViewState = intent.extras?.getParcelable("data")!!
                 Log.i("CAM", "new_view_state: " + new)
                 Log.i("CAM", "from:           " + old)
                 engine?.viewState =  new
                 if (old != new) {
-                    Log.i("CAM", "DIFFFFFFFFFFFFFFFFFFF")
+                    Log.i("CAM", "diff")
                     engine?.restart()
                 }
             }
@@ -140,7 +140,7 @@ class Cam : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.i("CAM", "OnDezstoy")
+        Log.i("CAM", "OnDestroy")
         kill()
     }
 

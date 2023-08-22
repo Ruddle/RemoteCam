@@ -3,7 +3,6 @@ package com.samsung.android.scan3d.serv
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
@@ -22,35 +21,22 @@ import android.os.Parcelable
 import android.util.Log
 import android.util.Size
 import android.view.Surface
-import com.samsung.android.scan3d.fragments.CameraFragment2
-import com.samsung.android.scan3d.fragments.SelectorFragment
+import com.samsung.android.scan3d.fragments.CameraFragment
 import com.samsung.android.scan3d.http.HttpService
+import com.samsung.android.scan3d.util.Selector
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-/*
-import org.libjpegturbo.turbojpeg.TJ
-import org.libjpegturbo.turbojpeg.TJCompressor
-import org.libjpegturbo.turbojpeg.YUVImage */
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
-
 class CamEngine(val context: Context) {
 
     var http: HttpService? = null
-
-    /*
-    val tjc = TJCompressor()
-    val preplanes = arrayOf(ByteArray(1_000_000), ByteArray(1_000_000), ByteArray(1_000_000))
-    val dstBuf = ByteArray(10_000_000)
-    */
-
     var resW = 1280
     var resH = 720
-
 
     var insidePause = false
 
@@ -58,13 +44,12 @@ class CamEngine(val context: Context) {
 
     private var cameraManager: CameraManager =
         context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-    private var cameraList: List<SelectorFragment.Companion.SensorDesc> =
-        SelectorFragment.enumerateCameras(cameraManager)
+    private var cameraList: List<Selector.SensorDesc> =
+        Selector.enumerateCameras(cameraManager)
 
     val camOutPutFormat = ImageFormat.JPEG // ImageFormat.YUV_420_888// ImageFormat.JPEG
 
     val executor = Executors.newSingleThreadExecutor()
-
 
     fun getEncoder(mimeType: String, resW: Int, resH: Int): MediaCodec? {
         fun selectCodec(mimeType: String, needEncoder: Boolean): MediaCodecInfo? {
@@ -98,7 +83,7 @@ class CamEngine(val context: Context) {
     }
 
 
-    var viewState: CameraFragment2.Companion.ViewState = CameraFragment2.Companion.ViewState(
+    var viewState: CameraFragment.Companion.ViewState = CameraFragment.Companion.ViewState(
         true,
         stream = false,
         cameraId = "0",
@@ -302,85 +287,8 @@ class CamEngine(val context: Context) {
                             )
 
                         }
-                        //     })
-
-                    } else {
-                        /*  executor.execute(Runnable {
-                              for (i in 0 until 1) {
-                                  img.planes[i].buffer.get(
-                                      preplanes[i],
-                                      0,
-                                      img.planes[i].buffer.remaining()
-                                  )
-                              }
-                              //  preplanes[0]= img.planes[0].buffer.array()
-                              // val buffer2 : Array< ByteArray> =  img.planes.map{ByteArray(it.buffer.remaining()).apply { it.buffer.get(this) }}.toTypedArray()
-                              val strieds: IntArray =
-                                  img.planes.map { it.rowStride / it.pixelStride }.toIntArray()
-                              // Log.i("JPEG", "places! " + img.planes.size)
-
-                              val uPlane = img.planes[1]
-                              val vPlane = img.planes[2]
-                              val uvRowStride = uPlane.rowStride
-                              val uvPixelStride = uPlane.pixelStride
-                              var index = 0
-                              val pp1 = preplanes[1]
-                              val pp2 = preplanes[2]
-                              for (j in 0 until resH / 2) {
-                                  for (i in 0 until resW / 2) {
-                                      val bufferIndex = j * uvRowStride + i * uvPixelStride
-                                      val u = uPlane.buffer[bufferIndex]
-                                      val v = uPlane.buffer[Math.min(460800 - 2, (bufferIndex + 1))]
-                                      pp1[index] = u
-                                      pp2[index] = v
-                                      index += 1
-                                  }
-                              }
-
-
-                              val yuvI = YUVImage(
-                                  preplanes,
-                                  null,
-                                  resW,
-                                  strieds,
-                                  resH,
-                                  TJ.SAMP_420
-                              )
-                              //   tjc.setSourceImage(bytes, 0, 0, resW, 0, resH, TJ.SAMP_420)
-                              tjc.setSourceImage(yuvI)
-                              tjc.setJPEGQuality(viewState.quality)
-                              tjc.setSubsamp(TJ.SAMP_420)
-                              val outputBytes: ByteArray = dstBuf
-                              tjc.compress(dstBuf, 0)
-                              img.close()
-
-                              //val output = BitmapFactory.decodeByteArray(outputBytes, 0, tjc.compressedSize)
-                              if (kodd % 10 == 0) {
-                                  updateViewQuick(
-                                      DataQuick(
-                                          delta.toInt(),
-                                          (30 * tjc.compressedSize / 1000)
-                                      )
-                                  )
-                              }
-
-                              if (viewState.stream) {
-                                  http?.channel?.trySend(
-                                      outputBytes.sliceArray(
-                                          IntRange(
-                                              0,
-                                              tjc.compressedSize - 1
-                                          )
-                                      )
-                                  ) //bytes)
-                              }
-                              aquired.decrementAndGet()
-
-                          })*/
 
                     }
-
-
                 }
             },
             cameraHandler
@@ -418,8 +326,8 @@ class CamEngine(val context: Context) {
     companion object {
         @Parcelize
         data class Data(
-            val sensors: List<SelectorFragment.Companion.SensorDesc>,
-            val sensorSelected: SelectorFragment.Companion.SensorDesc,
+            val sensors: List<Selector.SensorDesc>,
+            val sensorSelected: Selector.SensorDesc,
             val resolutions: List<Size>,
             val resolutionSelected: Int,
         ) : Parcelable

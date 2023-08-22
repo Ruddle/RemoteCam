@@ -35,18 +35,8 @@
 
     <fragment
         android:id="@+id/camera_fragment"
-        android:name="com.samsung.android.scan3d.fragments.CameraFragment2"
+        android:name="com.samsung.android.scan3d.fragments.CameraFragment"
         android:label="Camera" >
-
-<!--        <argument-->
-<!--            android:name="camera_id"-->
-<!--            app:argType="string"-->
-<!--            app:nullable="true"/>-->
-
-<!--        <argument-->
-<!--            android:name="pixel_format"-->
-<!--            app:argType="integer"-->
-<!--            app:nullable="true"/>-->
 
         <action
             android:id="@+id/action_camera_to_permissions"

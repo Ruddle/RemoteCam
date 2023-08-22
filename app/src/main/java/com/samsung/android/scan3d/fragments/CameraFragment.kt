@@ -38,16 +38,16 @@ import androidx.navigation.Navigation
 import com.example.android.camera.utils.OrientationLiveData
 import com.samsung.android.scan3d.CameraActivity
 import com.samsung.android.scan3d.R
-import com.samsung.android.scan3d.databinding.FragmentCamera2Binding
+import com.samsung.android.scan3d.databinding.FragmentCameraBinding
 import com.samsung.android.scan3d.serv.CamEngine
 import com.samsung.android.scan3d.util.ClipboardUtil
 import com.samsung.android.scan3d.util.IpUtil
 import kotlinx.parcelize.Parcelize
 
-class CameraFragment2 : Fragment() {
+class CameraFragment : Fragment() {
 
     /** Android ViewBinding */
-    private var _fragmentCameraBinding: FragmentCamera2Binding? = null
+    private var _fragmentCameraBinding: FragmentCameraBinding? = null
 
     private val fragmentCameraBinding get() = _fragmentCameraBinding!!
 
@@ -75,7 +75,7 @@ class CameraFragment2 : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _fragmentCameraBinding = FragmentCamera2Binding.inflate(inflater, container, false)
+        _fragmentCameraBinding = FragmentCameraBinding.inflate(inflater, container, false)
 
         // Get the local ip address
         val localIp = IpUtil.getLocalIpAddress()
@@ -328,7 +328,7 @@ class CameraFragment2 : Fragment() {
     }
 
     companion object {
-        private val TAG = CameraFragment2::class.java.simpleName
+        private val TAG = CameraFragment::class.java.simpleName
 
         @Parcelize
         data class ViewState(
