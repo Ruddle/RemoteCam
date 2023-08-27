@@ -21,17 +21,18 @@ import android.os.Parcelable
 import android.util.Log
 import android.util.Size
 import android.view.Surface
-import com.samsung.android.scan3d.fragments.CameraFragment
+import com.samsung.android.scan3d.fragments.ViewState
 import com.samsung.android.scan3d.http.HttpService
 import com.samsung.android.scan3d.util.Selector
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicInteger
+
 class CamEngine(val context: Context) {
 
     var http: HttpService? = null
@@ -44,8 +45,7 @@ class CamEngine(val context: Context) {
 
     private var cameraManager: CameraManager =
         context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-    private var cameraList: List<Selector.SensorDesc> =
-        Selector.enumerateCameras(cameraManager)
+    private var cameraList: List<Selector.SensorDesc> = Selector.enumerateCameras(cameraManager)
 
     val camOutPutFormat = ImageFormat.JPEG // ImageFormat.YUV_420_888// ImageFormat.JPEG
 
@@ -57,8 +57,7 @@ class CamEngine(val context: Context) {
             list.forEach {
                 if (it.isEncoder) {
                     Log.i(
-                        "CODECS",
-                        "We got type " + it.name + " " + it.supportedTypes.contentToString()
+                        "CODECS", "We got type " + it.name + " " + it.supportedTypes.contentToString()
                     )
                     if (it.supportedTypes.any { e -> e.equals(mimeType, ignoreCase = true) }) {
                         return it
@@ -82,26 +81,18 @@ class CamEngine(val context: Context) {
         return encoder
     }
 
-
-    var viewState: CameraFragment.Companion.ViewState = CameraFragment.Companion.ViewState(
-        true,
-        stream = false,
-        cameraId = "0",
-        quality = 80,
-        resolutionIndex = null
+    var viewState: ViewState = ViewState(
+        true, stream = false, cameraId = "0", quality = 80, resolutionIndex = null
     )
 
     /** [CameraCharacteristics] corresponding to the provided Camera ID */
-    var characteristics: CameraCharacteristics =
-        cameraManager.getCameraCharacteristics(viewState.cameraId)
+    var characteristics: CameraCharacteristics = cameraManager.getCameraCharacteristics(viewState.cameraId)
 
     var sizes = characteristics.get(
         CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
     )!!.getOutputSizes(camOutPutFormat).reversed()
 
-
     private lateinit var imageReader: ImageReader
-
 
     private val cameraThread = HandlerThread("CameraThread").apply { start() }
     private val cameraHandler = Handler(cameraThread.looper)
@@ -126,21 +117,17 @@ class CamEngine(val context: Context) {
     fun restart() {
         stopRunning()
         runBlocking { initializeCamera() }
-
     }
 
     @SuppressLint("MissingPermission")
     private suspend fun openCamera(
-        manager: CameraManager,
-        cameraId: String,
-        handler: Handler? = null
+        manager: CameraManager, cameraId: String, handler: Handler? = null
     ): CameraDevice = suspendCancellableCoroutine { cont ->
         manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(device: CameraDevice) = cont.resume(device)
 
             override fun onDisconnected(device: CameraDevice) {
                 Log.w("CamEngine", "Camera $cameraId has been disconnected")
-
             }
 
             override fun onError(device: CameraDevice, error: Int) {
@@ -164,9 +151,7 @@ class CamEngine(val context: Context) {
      * suspend coroutine
      */
     private suspend fun createCaptureSession(
-        device: CameraDevice,
-        targets: List<Surface>,
-        handler: Handler? = null
+        device: CameraDevice, targets: List<Surface>, handler: Handler? = null
     ): CameraCaptureSession = suspendCoroutine { cont ->
 
         // Create a capture session using the predefined targets; this also involves defining the
@@ -186,8 +171,7 @@ class CamEngine(val context: Context) {
     suspend fun initializeCamera() {
         Log.i("CAMERA", "initializeCamera")
 
-
-        val showLiveSurface = viewState.preview && !insidePause && previewSurface != null
+        val showLiveSurface = viewState.preview == true && !insidePause && previewSurface != null
         isShowingPreview = showLiveSurface
 
         stopRunning()
@@ -220,7 +204,6 @@ class CamEngine(val context: Context) {
         var targets = listOf(imageReader.surface)
         if (showLiveSurface) {
 
-
             targets = targets.plus(previewSurface!!)
         }
         session = createCaptureSession(camera, targets, cameraHandler)
@@ -231,23 +214,18 @@ class CamEngine(val context: Context) {
             captureRequest.addTarget(previewSurface!!)
         }
         captureRequest.addTarget(imageReader.surface)
-        captureRequest.set(CaptureRequest.JPEG_QUALITY, viewState.quality.toByte())
+        captureRequest.set(CaptureRequest.JPEG_QUALITY, viewState.quality?.toByte())
         var lastTime = System.currentTimeMillis()
-
 
         var kodd = 0
         var aquired = AtomicInteger(0)
         session!!.setRepeatingRequest(
-            captureRequest.build(),
-            object : CameraCaptureSession.CaptureCallback() {
+            captureRequest.build(), object : CameraCaptureSession.CaptureCallback() {
 
                 override fun onCaptureCompleted(
-                    session: CameraCaptureSession,
-                    request: CaptureRequest,
-                    result: TotalCaptureResult
+                    session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult
                 ) {
                     super.onCaptureCompleted(session, request, result)
-
 
                     var lastImg = imageReader.acquireNextImage()
 
@@ -272,26 +250,21 @@ class CamEngine(val context: Context) {
                         if (kodd % 10 == 0) {
                             updateViewQuick(
                                 DataQuick(
-                                    delta.toInt(),
-                                    (30 * bytes.size / 1000)
+                                    delta.toInt(), (30 * bytes.size / 1000)
                                 )
                             )
                         }
 
                         img.close()
                         aquired.decrementAndGet()
-                        if (viewState.stream) {
-
+                        if (viewState.stream == true) {
                             http?.channel?.trySend(
                                 bytes
                             )
-
                         }
-
                     }
                 }
-            },
-            cameraHandler
+            }, cameraHandler
         )
         updateView()
     }
@@ -304,8 +277,7 @@ class CamEngine(val context: Context) {
     fun updateView() {
         val intent = Intent("UpdateFromCameraEngine") //FILTER is a string to identify this intent
         intent.putExtra(
-            "data",
-            Data(
+            "data", Data(
                 cameraList,
                 cameraList.find { it.cameraId == viewState.cameraId }!!,
                 resolutions = sizes,
@@ -323,21 +295,17 @@ class CamEngine(val context: Context) {
         context.sendBroadcast(intent)
     }
 
-    companion object {
-        @Parcelize
-        data class Data(
-            val sensors: List<Selector.SensorDesc>,
-            val sensorSelected: Selector.SensorDesc,
-            val resolutions: List<Size>,
-            val resolutionSelected: Int,
-        ) : Parcelable
+    companion object { @Parcelize
+    data class Data(
+        val sensors: List<Selector.SensorDesc>,
+        val sensorSelected: Selector.SensorDesc,
+        val resolutions: List<Size>,
+        val resolutionSelected: Int,
+    ) : Parcelable
 
         @Parcelize
         data class DataQuick(
-            val ms: Int,
-            val rateKbs: Int
+            val ms: Int, val rateKbs: Int
         ) : Parcelable
     }
-
-
 }
