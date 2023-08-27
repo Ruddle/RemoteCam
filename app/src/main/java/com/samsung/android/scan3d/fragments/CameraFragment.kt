@@ -16,13 +16,13 @@
 
 package com.samsung.android.scan3d.fragments
 
+import android.Manifest.permission.*
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
-import android.os.Parcelable
 import android.util.Log
 import android.util.Size
 import android.view.LayoutInflater
@@ -32,26 +32,34 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
 import com.example.android.camera.utils.OrientationLiveData
 import com.samsung.android.scan3d.CameraActivity
+import com.samsung.android.scan3d.KILL_THE_APP
 import com.samsung.android.scan3d.R
 import com.samsung.android.scan3d.databinding.FragmentCameraBinding
 import com.samsung.android.scan3d.serv.CamEngine
+import com.samsung.android.scan3d.serv.CameraActionState
+import com.samsung.android.scan3d.serv.CameraActionState.NEW_VIEW_STATE
 import com.samsung.android.scan3d.util.ClipboardUtil
 import com.samsung.android.scan3d.util.IpUtil
 import com.samsung.android.scan3d.util.Selector
-import kotlinx.parcelize.Parcelize
-
-private const val DEFAULT_WIDTH = 1280
-private const val DEFAULT_HEIGHT = 720
+import com.samsung.android.scan3d.util.isAllPermissionsGranted
+import com.samsung.android.scan3d.util.requestPermissionList
+import kotlinx.coroutines.launch
 
 class CameraFragment : Fragment() {
 
     private var _binding: FragmentCameraBinding? = null
     private val binding get() = _binding!!
+    private val viewModel: CameraViewModel by viewModels()
 
     /** Host's navigation controller */
     private val navController: NavController by lazy {
@@ -64,9 +72,7 @@ class CameraFragment : Fragment() {
     private var resolutionWidth = DEFAULT_WIDTH
     private var resolutionHeight = DEFAULT_HEIGHT
 
-    var viewState = ViewState(true, stream = false, cameraId = "0", quality = 80, resolutionIndex = null)
-
-    lateinit var cameraActivity: CameraActivity
+    private lateinit var cameraActivity: CameraActivity
 
     /** Live data listener for changes in the device orientation relative to the camera */
     private lateinit var relativeOrientation: OrientationLiveData
@@ -75,16 +81,6 @@ class CameraFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         _binding = FragmentCameraBinding.inflate(inflater, container, false)
-
-        binding.textView6.apply {
-            text = "${IpUtil.getLocalIpAddress()}:8080/cam.mjpeg"
-            setOnClickListener {
-                ClipboardUtil.copyToClipboard(context, "ip", text.toString())
-                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        cameraActivity = requireActivity() as CameraActivity
         return binding.root
     }
 
@@ -97,16 +93,13 @@ class CameraFragment : Fragment() {
 
             intent.extras?.getParcelable<CamEngine.Companion.Data>("data")?.let {
                 setViews(it)
-            } ?: run {
-                return
-            }
+            } ?: run { return }
         }
 
         private fun setViews(data: CamEngine.Companion.Data) {
             val resolution = data.resolutions[data.resolutionSelected]
             resolutionWidth = resolution.width
             resolutionHeight = resolution.height
-
             binding.viewFinder.setAspectRatio(resolutionWidth, resolutionHeight)
             setSwitchListeners()
             setSpinnerCam(data)
@@ -116,11 +109,11 @@ class CameraFragment : Fragment() {
 
         private fun setSwitchListeners() {
             binding.switch1.setOnCheckedChangeListener { _, prev ->
-                viewState.preview = prev
+                viewModel.uiState.value.preview = prev
                 sendViewState()
             }
             binding.switch2.setOnCheckedChangeListener { _, prev ->
-                viewState.stream = prev
+                viewModel.uiState.value.stream = prev
                 sendViewState()
             }
         }
@@ -134,15 +127,15 @@ class CameraFragment : Fragment() {
 
             with(binding.spinnerRes) {
                 adapter = spinnerAdapter
-                viewState.resolutionIndex?.let {
-                    setSelection(viewState.resolutionIndex!!)
+                viewModel.uiState.value.resolutionIndex?.let {
+                    setSelection(viewModel.uiState.value.resolutionIndex!!)
                     onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                         override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
                             resolutionWidth = outputFormats[p2].width
                             resolutionHeight = outputFormats[p2].height
                             binding.viewFinder.setAspectRatio(resolutionWidth, resolutionHeight)
-                            if (p2 != viewState.resolutionIndex) {
-                                viewState.resolutionIndex = p2
+                            if (p2 != viewModel.uiState.value.resolutionIndex) {
+                                viewModel.uiState.value.resolutionIndex = p2
                                 sendViewState()
                             }
                         }
@@ -151,7 +144,7 @@ class CameraFragment : Fragment() {
                     }
                 } ?: run {
                     Log.i("DEUIBGGGGGG", "NO PRIOR R, " + data.resolutionSelected)
-                    viewState.resolutionIndex = data.resolutionSelected
+                    viewModel.uiState.value.resolutionIndex = data.resolutionSelected
                 }
             }
         }
@@ -164,10 +157,10 @@ class CameraFragment : Fragment() {
 
             with(binding.spinnerQua) {
                 adapter = spinnerAdapter
-                setSelection(spinnerDataList.indexOfFirst { it.toInt() == viewState.quality })
+                setSelection(spinnerDataList.indexOfFirst { it.toInt() == viewModel.uiState.value.quality })
                 onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                        viewState.quality = spinnerDataList[p2].toInt()
+                        viewModel.uiState.value.quality = spinnerDataList[p2].toInt()
                         sendViewState()
                     }
 
@@ -187,10 +180,10 @@ class CameraFragment : Fragment() {
                 setSelection(data.sensors.indexOf(data.sensorSelected))
                 onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                        if (viewState.cameraId != data.sensors[p2].cameraId) {
-                            viewState.resolutionIndex = null
+                        if (viewModel.uiState.value.cameraId != data.sensors[p2].cameraId) {
+                            viewModel.uiState.value.resolutionIndex = null
                         }
-                        viewState.cameraId = data.sensors[p2].cameraId
+                        viewModel.uiState.value.cameraId = data.sensors[p2].cameraId
                         sendViewState()
                     }
 
@@ -201,9 +194,8 @@ class CameraFragment : Fragment() {
     }
 
     fun sendViewState() {
-        cameraActivity.sendCam {
-            it.action = "new_view_state"
-            it.putExtra("data", viewState)
+        cameraActivity.setCameraForegroundServiceState(NEW_VIEW_STATE) {
+            it.putExtra("data", viewModel.uiState.value)
         }
     }
 
@@ -225,38 +217,81 @@ class CameraFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         Log.i("onViewCreated", "onViewCreated")
 
+        requestPermissionList(getPermissionsRequest(), REQUIRED_PERMISSIONS)
+        cameraActivity = requireActivity() as CameraActivity
 
-        cameraActivity.sendCam {
-            it.action = "start_camera_engine"
-        }
-        // engine.start(requireContext())
+        initViews()
+    }
 
-        with(binding) {
-            buttonKill.setOnClickListener {
-                Log.i("CameraFrag", "KILL")
-                val intent = Intent("KILL") //FILTER is a string to identify this intent
-                requireContext().sendBroadcast(intent)
-            }
+    private fun initViews() {
+        setViews()
+        setListeners()
+        setObservers()
+    }
 
-            viewFinder.holder.addCallback(object : SurfaceHolder.Callback {
-                override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
-
-                override fun surfaceChanged(
-                    holder: SurfaceHolder, format: Int, width: Int, height: Int
-                ) = Unit
-
-                override fun surfaceCreated(holder: SurfaceHolder) {
-                    viewFinder.setAspectRatio(
-                        resolutionWidth, resolutionHeight
-                    )
-                    cameraActivity.sendCam {
-                        it.action = "new_preview_surface"
+    private fun setViews() = with(binding) {
+        textView6.text = "${IpUtil.getLocalIpAddress()}:8080/cam.mjpeg"
+        viewFinder.holder.addCallback(object : SurfaceHolder.Callback {
+            override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
+            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = Unit
+            override fun surfaceCreated(holder: SurfaceHolder) {
+                viewFinder.setAspectRatio(resolutionWidth, resolutionHeight)
+                if (viewModel.isPermissionsGranted.value == true) {
+                    cameraActivity.setCameraForegroundServiceState(CameraActionState.NEW_PREVIEW_SURFACE) {
                         it.putExtra("surface", viewFinder.holder.surface)
                     }
                 }
-            })
+            }
+        })
+    }
+
+    private fun setListeners() = with(binding) {
+        textView6.setOnClickListener {
+            ClipboardUtil.copyToClipboard(context, "ip", textView6.text.toString())
+            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+        }
+        buttonKill.setOnClickListener {
+            val intent = Intent(KILL_THE_APP)
+            requireContext().sendBroadcast(intent)
         }
     }
+
+    private fun setObservers() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isPermissionsGranted.collect {
+                    it?.let { isGranted ->
+                        if (isGranted) {
+                            cameraActivity.setCameraForegroundServiceState(CameraActionState.START_ENGINE)
+                            cameraActivity.setCameraForegroundServiceState(CameraActionState.NEW_PREVIEW_SURFACE) { ca ->
+                                ca.putExtra("surface", binding.viewFinder.holder.surface)
+                            }
+                            // engine.start(requireContext())
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Permission should be accepted to delete download videos",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getPermissionsRequest() =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    if (isAllPermissionsGranted(REQUIRED_PERMISSIONS)) {
+                        viewModel.isPermissionsGranted.emit(true)
+                    } else {
+                        viewModel.isPermissionsGranted.emit(false)
+                    }
+                }
+            }
+        }
 
     override fun onStop() {
         super.onStop()
@@ -275,14 +310,8 @@ class CameraFragment : Fragment() {
     companion object {
 
         private val TAG = CameraFragment::class.java.simpleName
-
-        @Parcelize
-        data class ViewState(
-            var preview: Boolean,
-            var stream: Boolean,
-            var cameraId: String,
-            var resolutionIndex: Int?,
-            var quality: Int
-        ) : Parcelable
+        private val REQUIRED_PERMISSIONS = arrayOf(CAMERA, INTERNET, FOREGROUND_SERVICE, POST_NOTIFICATIONS)
+        private const val DEFAULT_WIDTH = 1280
+        private const val DEFAULT_HEIGHT = 720
     }
 }

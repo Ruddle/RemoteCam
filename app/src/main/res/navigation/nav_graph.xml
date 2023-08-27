@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright 2020 The Android Open Source Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,36 +13,16 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<navigation
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/permissions_fragment">
-
-    <fragment
-        android:id="@+id/permissions_fragment"
-        android:name="com.samsung.android.scan3d.fragments.PermissionsFragment"
-        android:label="Permissions" >
-
-        <action
-            android:id="@+id/action_permissions_to_selector"
-            app:destination="@id/camera_fragment"
-            app:popUpTo="@id/permissions_fragment"
-            app:popUpToInclusive="true" />
-
-    </fragment>
+    app:startDestination="@id/camera_fragment">
 
     <fragment
         android:id="@+id/camera_fragment"
         android:name="com.samsung.android.scan3d.fragments.CameraFragment"
-        android:label="Camera" >
-
-        <action
-            android:id="@+id/action_camera_to_permissions"
-            app:destination="@id/permissions_fragment"
-            app:popUpTo="@id/camera_fragment"
-            app:popUpToInclusive="true"/>
-
-    </fragment>
+        android:label="Camera"
+        tools:layout="@layout/fragment_camera" />
 
 </navigation>
