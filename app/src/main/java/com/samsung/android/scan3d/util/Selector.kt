@@ -8,14 +8,12 @@ import android.hardware.camera2.CameraMetadata
 import android.os.Parcelable
 import android.util.Log
 import kotlinx.parcelize.Parcelize
-import java.lang.Exception
 import kotlin.math.atan
 import kotlin.math.roundToInt
 
-object Selector {
-    /** Helper class used as a data holder for each selectable camera format item */
-    @Parcelize
-    data class SensorDesc(val title: String, val cameraId: String, val format: Int) : Parcelable
+object Selector { /** Helper class used as a data holder for each selectable camera format item */
+@Parcelize
+data class SensorDesc(val title: String, val cameraId: String, val format: Int) : Parcelable
 
     /** Helper function used to convert a lens orientation enum into a human-readable string */
     private fun lensOrientationString(value: Int) = when (value) {
@@ -90,26 +88,20 @@ object Selector {
                     )
                 ) {
                     false
-                } else if (capabilities.contains(
+                } else {
+                    capabilities.contains(
                         CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE
                     )
-                ) {
-                    true
-                } else {
-                    false
                 }
-
-
             } catch (e: Exception) {
                 false
             }
         }.forEach { cameraIds2.add(it) }
 
-
         // Iterate over the list of cameras and return all the compatible ones
         cameraIds2.forEach { id ->
 
-            Log.i("SELECTOR", "id: " + id)
+            Log.i("SELECTOR", "id: $id")
             val characteristics = cameraManager.getCameraCharacteristics(id)
             val orientation = lensOrientationString(
                 characteristics.get(CameraCharacteristics.LENS_FACING)!!
@@ -122,7 +114,6 @@ object Selector {
 
             capabilities.forEach { Log.i("CAP", "" + getCapStringAtIndex(it)) }
 
-
             val outputFormats = characteristics.get(
                 CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
             )!!.outputFormats
@@ -130,7 +121,6 @@ object Selector {
             val outputSizes = characteristics.get(
                 CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
             )!!.getOutputSizes(ImageFormat.JPEG)
-
 
             val foaclmm = characteristics.get(
                 CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS
@@ -144,20 +134,19 @@ object Selector {
                 CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE
             )!!
 
-            val vfov =(( 2.0*(180.0 / 3.141592) * atan(sensorSize.height / (2.0 * foaclmm))).roundToInt().toString()+"°").padEnd(4,' ')
+            val vfov = ((2.0 * (180.0 / 3.141592) * atan(sensorSize.height / (2.0 * foaclmm))).roundToInt()
+                .toString() + "°").padEnd(4, ' ')
 
             // All cameras *must* support JPEG output so we don't need to check characteristics
 
-            val title=  "vfov:$vfov $foc $ape $orientation"
-            if(!availableCameras.any {it-> it.title==title } ){
+            val title = "vfov:$vfov $foc $ape $orientation"
+            if (!availableCameras.any { it -> it.title == title }) {
                 availableCameras.add(
                     SensorDesc(
                         title, id, ImageFormat.JPEG
                     )
                 )
             }
-
-
 
         }
 

@@ -20,16 +20,15 @@ import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
 import android.view.SurfaceView
-import kotlin.math.roundToInt
 
 /**
  * A [SurfaceView] that can be adjusted to a specified aspect ratio and
  * performs center-crop transformation of input frames.
  */
 class AutoFitSurfaceView @JvmOverloads constructor(
-        context: Context,
-        attrs: AttributeSet? = null,
-        defStyle: Int = 0
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyle: Int = 0
 ) : SurfaceView(context, attrs, defStyle) {
 
     private var aspectRatio = 0f
@@ -51,7 +50,6 @@ class AutoFitSurfaceView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 
-
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
         Log.i("AUTOFIT", "Measured dimensions set: $width x $height")
@@ -59,24 +57,21 @@ class AutoFitSurfaceView @JvmOverloads constructor(
             setMeasuredDimension(width, height)
         } else {
 
-
-            val currentRatio = width.toFloat()/height.toFloat()
-            val inv = 1.0/aspectRatio
+            val currentRatio = width.toFloat() / height.toFloat()
+            val inv = 1.0 / aspectRatio
             val newWidth: Int
             val newHeight: Int
-            if(currentRatio > inv){
+            if (currentRatio > inv) {
                 //The screen is larger than the picture
                 //We need black bars on the side
-                 newWidth = (height*inv).toInt()
-                 newHeight= height
-
-            }else{
-                 newWidth = width
-                 newHeight= (width/inv).toInt()
+                newWidth = (height * inv).toInt()
+                newHeight = height
+            } else {
+                newWidth = width
+                newHeight = (width / inv).toInt()
             }
 
             // Performs center-crop transformation of the camera frames
-
 
             Log.i(TAG, "Measured dimensions set: $newWidth x $newHeight")
             setMeasuredDimension(newWidth, newHeight)
@@ -84,6 +79,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
     }
 
     companion object {
+
         private val TAG = AutoFitSurfaceView::class.java.simpleName
     }
 }

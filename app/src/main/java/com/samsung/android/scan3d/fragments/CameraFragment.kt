@@ -16,40 +16,50 @@
 
 package com.samsung.android.scan3d.fragments
 
+import android.Manifest.permission.*
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
-import android.os.Parcelable
 import android.util.Log
+import android.util.Size
 import android.view.LayoutInflater
 import android.view.SurfaceHolder
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.CompoundButton
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
 import com.example.android.camera.utils.OrientationLiveData
 import com.samsung.android.scan3d.CameraActivity
+import com.samsung.android.scan3d.KILL_THE_APP
 import com.samsung.android.scan3d.R
 import com.samsung.android.scan3d.databinding.FragmentCameraBinding
 import com.samsung.android.scan3d.serv.CamEngine
+import com.samsung.android.scan3d.serv.CameraActionState
+import com.samsung.android.scan3d.serv.CameraActionState.NEW_VIEW_STATE
 import com.samsung.android.scan3d.util.ClipboardUtil
 import com.samsung.android.scan3d.util.IpUtil
-import kotlinx.parcelize.Parcelize
+import com.samsung.android.scan3d.util.Selector
+import com.samsung.android.scan3d.util.isAllPermissionsGranted
+import com.samsung.android.scan3d.util.requestPermissionList
+import kotlinx.coroutines.launch
 
 class CameraFragment : Fragment() {
 
-    /** Android ViewBinding */
-    private var _fragmentCameraBinding: FragmentCameraBinding? = null
-
-    private val fragmentCameraBinding get() = _fragmentCameraBinding!!
+    private var _binding: FragmentCameraBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: CameraViewModel by viewModels()
 
     /** Host's navigation controller */
     private val navController: NavController by lazy {
@@ -59,254 +69,229 @@ class CameraFragment : Fragment() {
     /** AndroidX navigation arguments */
     //  private val args: CameraFragmentArgs by navArgs()
 
-    var resW = 1280
-    var resH = 720
+    private var resolutionWidth = DEFAULT_WIDTH
+    private var resolutionHeight = DEFAULT_HEIGHT
 
-    var viewState =
-        ViewState(true, stream = false, cameraId = "0", quality = 80, resolutionIndex = null)
-
-    lateinit var Cac: CameraActivity
+    private lateinit var cameraActivity: CameraActivity
 
     /** Live data listener for changes in the device orientation relative to the camera */
     private lateinit var relativeOrientation: OrientationLiveData
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
-        _fragmentCameraBinding = FragmentCameraBinding.inflate(inflater, container, false)
-
-        // Get the local ip address
-        val localIp = IpUtil.getLocalIpAddress()
-        _fragmentCameraBinding!!.textView6.text = "$localIp:8080/cam.mjpeg"
-        _fragmentCameraBinding!!.textView6.setOnClickListener {
-            // Copy the ip address to the clipboard
-            ClipboardUtil.copyToClipboard(context, "ip", _fragmentCameraBinding!!.textView6.text.toString())
-            // Toast to notify the user
-            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-        }
-
-        Cac = (activity as CameraActivity?)!!
-        return fragmentCameraBinding.root
+        _binding = FragmentCameraBinding.inflate(inflater, container, false)
+        return binding.root
     }
-
 
     private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-
-
-            intent.extras?.getParcelable<CamEngine.Companion.DataQuick>("dataQuick")?.apply {
-                activity?.runOnUiThread(Runnable {
-                    // Stuff that updates the UI
-                    fragmentCameraBinding.qualFeedback?.text =
-                        " " + this.rateKbs + "kB/sec"
-                    fragmentCameraBinding.ftFeedback?.text =
-                        " " + this.ms + "ms"
-                })
-
+            intent.extras?.getParcelable<CamEngine.Companion.DataQuick>("dataQuick")?.let {
+                binding.qualFeedback.text = " " + it.rateKbs + "kB/sec"
+                binding.ftFeedback.text = " " + it.ms + "ms"
             }
 
+            intent.extras?.getParcelable<CamEngine.Companion.Data>("data")?.let {
+                setViews(it)
+            } ?: run { return }
+        }
 
-            val data = intent.extras?.getParcelable<CamEngine.Companion.Data>("data") ?: return
+        private fun setViews(data: CamEngine.Companion.Data) {
+            val resolution = data.resolutions[data.resolutionSelected]
+            resolutionWidth = resolution.width
+            resolutionHeight = resolution.height
+            binding.viewFinder.setAspectRatio(resolutionWidth, resolutionHeight)
+            setSwitchListeners()
+            setSpinnerCam(data)
+            setSpinnerQua()
+            setSpinnerRes(data)
+        }
 
+        private fun setSwitchListeners() {
+            binding.switch1.setOnCheckedChangeListener { _, prev ->
+                viewModel.uiState.value.preview = prev
+                sendViewState()
+            }
+            binding.switch2.setOnCheckedChangeListener { _, prev ->
+                viewModel.uiState.value.stream = prev
+                sendViewState()
+            }
+        }
 
-            val re = data.resolutions[data.resolutionSelected]
-            resW = re.width
-            resH = re.height
+        private fun setSpinnerRes(data: CamEngine.Companion.Data) {
+            val outputFormats = data.resolutions
+            val spinnerDataList = outputFormats.map(Size::toString)
+            val spinnerAdapter = ArrayAdapter(
+                requireContext(), android.R.layout.simple_spinner_item, spinnerDataList
+            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
 
-            activity?.runOnUiThread(Runnable {
-
-                fragmentCameraBinding.viewFinder.setAspectRatio(resW, resH)
-            })
-
-
-            fragmentCameraBinding.switch1?.setOnCheckedChangeListener(object :
-                CompoundButton.OnCheckedChangeListener {
-                override fun onCheckedChanged(p0: CompoundButton?, p1: Boolean) {
-                    viewState.preview = p1
-                    sendViewState()
-                }
-            })
-            fragmentCameraBinding.switch2?.setOnCheckedChangeListener(object :
-                CompoundButton.OnCheckedChangeListener {
-                override fun onCheckedChanged(p0: CompoundButton?, p1: Boolean) {
-                    viewState.stream = p1
-                    sendViewState()
-                }
-            })
-
-            run {
-                val spinner = fragmentCameraBinding.spinnerCam
-                val spinnerDataList = ArrayList<Any>()
-                data.sensors.forEach { spinnerDataList.add(it.title) }
-                val spinnerAdapter =
-                    ArrayAdapter(
-                        requireContext(),
-                        android.R.layout.simple_spinner_item,
-                        spinnerDataList
-                    )
-                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                spinner!!.adapter = spinnerAdapter
-                spinner.setSelection(data.sensors.indexOf(data.sensorSelected))
-                spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-
-                        if (viewState.cameraId != data.sensors[p2].cameraId) {
-                            viewState.resolutionIndex = null
+            with(binding.spinnerRes) {
+                adapter = spinnerAdapter
+                viewModel.uiState.value.resolutionIndex?.let {
+                    setSelection(viewModel.uiState.value.resolutionIndex!!)
+                    onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                        override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                            resolutionWidth = outputFormats[p2].width
+                            resolutionHeight = outputFormats[p2].height
+                            binding.viewFinder.setAspectRatio(resolutionWidth, resolutionHeight)
+                            if (p2 != viewModel.uiState.value.resolutionIndex) {
+                                viewModel.uiState.value.resolutionIndex = p2
+                                sendViewState()
+                            }
                         }
 
-                        viewState.cameraId = data.sensors[p2].cameraId
-
-
-                        sendViewState()
+                        override fun onNothingSelected(p0: AdapterView<*>?) {}
                     }
-
-                    override fun onNothingSelected(p0: AdapterView<*>?) {
-                    }
-                }
-            }
-
-            run {
-                val spinner = fragmentCameraBinding.spinnerQua
-                val spinnerDataList = ArrayList<Any>()
-                val quals = arrayOf(1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
-                quals.forEach { spinnerDataList.add(it.toString()) }
-                // Initialize the ArrayAdapter
-                val spinnerAdapter =
-                    ArrayAdapter(
-                        requireContext(),
-                        android.R.layout.simple_spinner_item,
-                        spinnerDataList
-                    )
-                // Set the dropdown layout style
-                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                // Set the adapter for the Spinner
-                spinner!!.adapter = spinnerAdapter
-                spinner.setSelection(quals.indexOfFirst { it == viewState.quality })
-                spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                        viewState.quality = quals[p2]
-                        sendViewState()
-                    }
-
-                    override fun onNothingSelected(p0: AdapterView<*>?) {
-                    }
-                }
-            }
-
-            run {
-
-                val outputFormats = data.resolutions
-
-                val spinner = fragmentCameraBinding.spinnerRes
-                val spinnerDataList = ArrayList<Any>()
-                outputFormats.forEach { spinnerDataList.add(it.toString()) }
-                // Initialize the ArrayAdapter
-                val spinnerAdapter =
-                    ArrayAdapter(
-                        requireContext(),
-                        android.R.layout.simple_spinner_item,
-                        spinnerDataList
-                    )
-                // Set the dropdown layout style
-                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                // Set the adapter for the Spinner
-                spinner!!.adapter = spinnerAdapter
-
-
-                if (viewState.resolutionIndex == null) {
+                } ?: run {
                     Log.i("DEUIBGGGGGG", "NO PRIOR R, " + data.resolutionSelected)
-                    viewState.resolutionIndex = data.resolutionSelected
-                }
-
-                spinner.setSelection(viewState.resolutionIndex!!)
-                spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                        resW = outputFormats[p2].width
-                        resH = outputFormats[p2].height
-                        activity?.runOnUiThread(Runnable {
-
-                            fragmentCameraBinding.viewFinder.setAspectRatio(resW, resH)
-                        })
-                        if (p2 != viewState.resolutionIndex) {
-                            viewState.resolutionIndex = p2
-                            sendViewState()
-                        }
-
-                    }
-
-                    override fun onNothingSelected(p0: AdapterView<*>?) {
-                    }
+                    viewModel.uiState.value.resolutionIndex = data.resolutionSelected
                 }
             }
+        }
 
+        private fun setSpinnerQua() {
+            val spinnerDataList = arrayOf("1", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100")
+            val spinnerAdapter = ArrayAdapter(
+                requireContext(), android.R.layout.simple_spinner_item, spinnerDataList
+            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+
+            with(binding.spinnerQua) {
+                adapter = spinnerAdapter
+                setSelection(spinnerDataList.indexOfFirst { it.toInt() == viewModel.uiState.value.quality })
+                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                        viewModel.uiState.value.quality = spinnerDataList[p2].toInt()
+                        sendViewState()
+                    }
+
+                    override fun onNothingSelected(p0: AdapterView<*>?) {}
+                }
+            }
+        }
+
+        private fun setSpinnerCam(data: CamEngine.Companion.Data) {
+            val spinnerDataList = data.sensors.map(Selector.SensorDesc::title)
+            val spinnerAdapter = ArrayAdapter(
+                requireContext(), android.R.layout.simple_spinner_item, spinnerDataList
+            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+
+            with(binding.spinnerCam) {
+                adapter = spinnerAdapter
+                setSelection(data.sensors.indexOf(data.sensorSelected))
+                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                        if (viewModel.uiState.value.cameraId != data.sensors[p2].cameraId) {
+                            viewModel.uiState.value.resolutionIndex = null
+                        }
+                        viewModel.uiState.value.cameraId = data.sensors[p2].cameraId
+                        sendViewState()
+                    }
+
+                    override fun onNothingSelected(p0: AdapterView<*>?) {}
+                }
+            }
         }
     }
 
-
     fun sendViewState() {
-        Cac.sendCam {
-            it.action = "new_view_state"
-
-            it.putExtra("data", viewState)
+        cameraActivity.setCameraForegroundServiceState(NEW_VIEW_STATE) {
+            it.putExtra("data", viewModel.uiState.value)
         }
     }
 
     override fun onPause() {
         super.onPause()
         Log.i("onPause", "onPause")
-        activity?.unregisterReceiver(receiver)
+        requireActivity().unregisterReceiver(receiver)
     }
-
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onResume() {
         super.onResume()
         Log.i("onResume", "onResume")
-        activity?.registerReceiver(receiver, IntentFilter("UpdateFromCameraEngine"))
+        requireActivity().registerReceiver(receiver, IntentFilter("UpdateFromCameraEngine"))
     }
-
 
     @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         Log.i("onViewCreated", "onViewCreated")
 
+        requestPermissionList(getPermissionsRequest(), REQUIRED_PERMISSIONS)
+        cameraActivity = requireActivity() as CameraActivity
 
-        Cac.sendCam {
-            it.action = "start_camera_engine"
-        }
-        // engine.start(requireContext())
+        initViews()
+    }
 
-        Log.i("CAMMM", "fragmentCameraBinding.buttonKill " + fragmentCameraBinding.buttonKill)
-        fragmentCameraBinding.buttonKill.setOnClickListener {
-            Log.i("CameraFrag", "KILL")
-            val intent = Intent("KILL") //FILTER is a string to identify this intent
-            context?.sendBroadcast(intent)
-        }
+    private fun initViews() {
+        setViews()
+        setListeners()
+        setObservers()
+    }
 
-        fragmentCameraBinding.viewFinder.holder.addCallback(object : SurfaceHolder.Callback {
+    private fun setViews() = with(binding) {
+        textView6.text = "${IpUtil.getLocalIpAddress()}:8080/cam.mjpeg"
+        viewFinder.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
-
-            override fun surfaceChanged(
-                holder: SurfaceHolder,
-                format: Int,
-                width: Int,
-                height: Int
-            ) = Unit
-
+            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = Unit
             override fun surfaceCreated(holder: SurfaceHolder) {
-                fragmentCameraBinding.viewFinder.setAspectRatio(
-                    resW, resH
-                )
-                Cac.sendCam {
-                    it.action = "new_preview_surface"
-                    it.putExtra("surface", fragmentCameraBinding.viewFinder.holder.surface)
+                viewFinder.setAspectRatio(resolutionWidth, resolutionHeight)
+                if (viewModel.isPermissionsGranted.value == true) {
+                    cameraActivity.setCameraForegroundServiceState(CameraActionState.NEW_PREVIEW_SURFACE) {
+                        it.putExtra("surface", viewFinder.holder.surface)
+                    }
                 }
             }
         })
     }
+
+    private fun setListeners() = with(binding) {
+        textView6.setOnClickListener {
+            ClipboardUtil.copyToClipboard(context, "ip", textView6.text.toString())
+            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+        }
+        buttonKill.setOnClickListener {
+            val intent = Intent(KILL_THE_APP)
+            requireContext().sendBroadcast(intent)
+        }
+    }
+
+    private fun setObservers() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isPermissionsGranted.collect {
+                    it?.let { isGranted ->
+                        if (isGranted) {
+                            cameraActivity.setCameraForegroundServiceState(CameraActionState.START_ENGINE)
+                            cameraActivity.setCameraForegroundServiceState(CameraActionState.NEW_PREVIEW_SURFACE) { ca ->
+                                ca.putExtra("surface", binding.viewFinder.holder.surface)
+                            }
+                            // engine.start(requireContext())
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Permission should be accepted to delete download videos",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getPermissionsRequest() =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    if (isAllPermissionsGranted(REQUIRED_PERMISSIONS)) {
+                        viewModel.isPermissionsGranted.emit(true)
+                    } else {
+                        viewModel.isPermissionsGranted.emit(false)
+                    }
+                }
+            }
+        }
 
     override fun onStop() {
         super.onStop()
@@ -317,27 +302,16 @@ class CameraFragment : Fragment() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-
-    }
-
     override fun onDestroyView() {
-        _fragmentCameraBinding = null
+        _binding = null
         super.onDestroyView()
     }
 
     companion object {
+
         private val TAG = CameraFragment::class.java.simpleName
-
-        @Parcelize
-        data class ViewState(
-            var preview: Boolean,
-            var stream: Boolean,
-            var cameraId: String,
-            var resolutionIndex: Int?,
-            var quality: Int
-        ) : Parcelable
-
+        private val REQUIRED_PERMISSIONS = arrayOf(CAMERA, INTERNET, FOREGROUND_SERVICE, POST_NOTIFICATIONS)
+        private const val DEFAULT_WIDTH = 1280
+        private const val DEFAULT_HEIGHT = 720
     }
 }

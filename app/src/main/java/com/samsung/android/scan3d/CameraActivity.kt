@@ -20,21 +20,23 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import com.samsung.android.scan3d.databinding.ActivityCameraBinding
-import com.samsung.android.scan3d.http.HttpService
 import com.samsung.android.scan3d.serv.Cam
-import kotlinx.coroutines.channels.Channel
+import com.samsung.android.scan3d.serv.CameraActionState
+import com.samsung.android.scan3d.serv.CameraActionState.ON_PAUSE
+import com.samsung.android.scan3d.serv.CameraActionState.ON_RESUME
+import com.samsung.android.scan3d.serv.CameraActionState.START
+import com.samsung.android.scan3d.serv.CameraActionState.STOP
 
+const val KILL_THE_APP = "KILL"
 
 class CameraActivity : AppCompatActivity() {
 
-    private lateinit var activityCameraBinding: ActivityCameraBinding
+    private var _binding: ActivityCameraBinding? = null
+    private val binding get() = _binding!!
 
     private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -45,44 +47,38 @@ class CameraActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.i("CAMERAACTIVITY", "CAMERAACTIVITY onCreate")
-        activityCameraBinding = ActivityCameraBinding.inflate(layoutInflater)
-        setContentView(activityCameraBinding.root)
-        sendCam {
-            it.action = "start"
-        }
-        registerReceiver(receiver, IntentFilter("KILL"))
+        _binding = ActivityCameraBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        setCameraForegroundServiceState(START)
+        registerReceiver(receiver, IntentFilter(KILL_THE_APP))
     }
 
     override fun onPause() {
         super.onPause()
-        sendCam {
-            it.action = "onPause"
-        }
-    }
-
-    fun sendCam(extra: (Intent) -> Unit) {
-        var intent = Intent(this, Cam::class.java)
-        extra(intent)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        setCameraForegroundServiceState(ON_PAUSE)
     }
 
     override fun onDestroy() {
+        _binding = null
         super.onDestroy()
-        sendCam {
-            it.action = "stop"
-        }
+        setCameraForegroundServiceState(STOP)
         unregisterReceiver(receiver)
     }
 
     override fun onResume() {
         super.onResume()
-        sendCam {
-            it.action = "onResume"
+        setCameraForegroundServiceState(ON_RESUME)
+    }
+
+    fun setCameraForegroundServiceState(action: CameraActionState, extra: ((Intent) -> Unit)? = null) {
+        try {
+            val intent = Intent(this, Cam::class.java).also { it.action = action.name }
+            if (extra != null) extra(intent)
+
+            startForegroundService(intent)
+        } catch (exc: Throwable) {
+            Log.e("CameraFragment.TAG", "Error closing camera", exc)
         }
     }
 }

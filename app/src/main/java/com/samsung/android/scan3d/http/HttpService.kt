@@ -2,16 +2,20 @@ package com.samsung.android.scan3d.http
 
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
+import io.ktor.server.application.call
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.netty.NettyApplicationEngine
+import io.ktor.server.response.respondOutputStream
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
+import io.ktor.server.routing.routing
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import java.io.OutputStream
 
 class HttpService {
+
     lateinit var engine: NettyApplicationEngine
     var channel = Channel<ByteArray>(2)
     fun producer(): suspend OutputStream.() -> Unit = {
@@ -23,7 +27,8 @@ class HttpService {
             o.flush()
         }
     }
-    public fun main() {
+
+    fun main() {
         engine = embeddedServer(Netty, port = 8080) {
             routing {
                 get("/cam") {
@@ -32,12 +37,12 @@ class HttpService {
                 get("/cam.mjpeg") {
                     call.respondOutputStream(
                         ContentType.parse("multipart/x-mixed-replace;boundary=FRAME"),
-                        HttpStatusCode.OK, producer()
+                        HttpStatusCode.OK,
+                        producer()
                     )
                 }
             }
         }
         engine.start(wait = false)
     }
-
 }
