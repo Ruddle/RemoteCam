@@ -42,6 +42,7 @@ import java.nio.ByteBuffer
  * might have better performance.
  */
 class YuvToRgbConverter(context: Context) {
+
     private val rs = RenderScript.create(context)
     private val scriptYuvToRgb =
         ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs))
@@ -91,9 +92,9 @@ class YuvToRgbConverter(context: Context) {
 
     private fun needCreateAllocations(image: Image, yuvBuffer: YuvByteBuffer): Boolean {
         return (inputAllocation == null ||               // the very 1st call
-            inputAllocation!!.type.x != image.width ||   // image size changed
-            inputAllocation!!.type.y != image.height ||
-            inputAllocation!!.type.yuv != yuvBuffer.type || // image format changed
-            bytes.size == yuvBuffer.buffer.capacity())
+                inputAllocation!!.type.x != image.width ||   // image size changed
+                inputAllocation!!.type.y != image.height ||
+                inputAllocation!!.type.yuv != yuvBuffer.type || // image format changed
+                bytes.size == yuvBuffer.buffer.capacity())
     }
 }
