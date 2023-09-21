@@ -63,7 +63,7 @@ class CameraFragment : Fragment() {
     var resH = 720
 
     var viewState =
-        ViewState(true, stream = false, cameraId = "0", quality = 80, resolutionIndex = null)
+        ViewState(true, stream = false, cameraIndex = 0, quality = 80, resolutionIndex = null)
 
     lateinit var Cac: CameraActivity
 
@@ -152,11 +152,11 @@ class CameraFragment : Fragment() {
                 spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
 
-                        if (viewState.cameraId != data.sensors[p2].cameraId) {
+                        if (viewState.cameraIndex != p2) {
                             viewState.resolutionIndex = null
                         }
 
-                        viewState.cameraId = data.sensors[p2].cameraId
+                        viewState.cameraIndex = p2
 
 
                         sendViewState()
@@ -334,7 +334,7 @@ class CameraFragment : Fragment() {
         data class ViewState(
             var preview: Boolean,
             var stream: Boolean,
-            var cameraId: String,
+            var cameraIndex: Int = 0,
             var resolutionIndex: Int?,
             var quality: Int
         ) : Parcelable

@@ -86,14 +86,14 @@ class CamEngine(val context: Context) {
     var viewState: CameraFragment.Companion.ViewState = CameraFragment.Companion.ViewState(
         true,
         stream = false,
-        cameraId = "0",
+        cameraIndex = 0,
         quality = 80,
         resolutionIndex = null
     )
 
     /** [CameraCharacteristics] corresponding to the provided Camera ID */
     var characteristics: CameraCharacteristics =
-        cameraManager.getCameraCharacteristics(viewState.cameraId)
+        cameraManager.getCameraCharacteristics(cameraList[viewState.cameraIndex].cameraId)
 
     var sizes = characteristics.get(
         CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
@@ -193,7 +193,7 @@ class CamEngine(val context: Context) {
         stopRunning()
 
 
-        characteristics = cameraManager.getCameraCharacteristics(viewState.cameraId)
+        characteristics = cameraManager.getCameraCharacteristics(cameraList[viewState.cameraIndex].cameraId)
         sizes = characteristics.get(
             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
         )!!.getOutputSizes(camOutPutFormat).reversed()
@@ -213,7 +213,7 @@ class CamEngine(val context: Context) {
 
 
 
-        camera = openCamera(cameraManager, viewState.cameraId, cameraHandler)
+        camera = openCamera(cameraManager, cameraList[viewState.cameraIndex].cameraId, cameraHandler)
         imageReader = ImageReader.newInstance(
             resW, resH, camOutPutFormat, 4
         )
@@ -307,7 +307,7 @@ class CamEngine(val context: Context) {
             "data",
             Data(
                 cameraList,
-                cameraList.find { it.cameraId == viewState.cameraId }!!,
+                cameraList[viewState.cameraIndex],
                 resolutions = sizes,
                 resolutionSelected = viewState.resolutionIndex!!
             )

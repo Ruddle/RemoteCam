@@ -61,54 +61,12 @@ object Selector {
 
     @SuppressLint("InlinedApi")
     fun enumerateCameras(cameraManager: CameraManager): List<SensorDesc> {
+        val cameraIdList = cameraManager.cameraIdList
+        println("cameraIdList: ${cameraIdList.asList()}")
         val availableCameras: MutableList<SensorDesc> = mutableListOf()
 
-        // Get list of all compatible cameras
-        val cameraIds = mutableListOf<String>()
-
-        for (i in 0..100) {
-
-            val istr = i.toString()
-            if (!cameraIds.contains(istr)) {
-                cameraIds.add(istr)
-            }
-        }
-
-        val cameraIds2 = mutableListOf<String>()
-        cameraIds.filter {
-
-            try {
-                val characteristics = cameraManager.getCameraCharacteristics(it)
-                val capabilities = characteristics.get(
-                    CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
-                )
-
-                if (capabilities == null) {
-                    false
-                } else if (capabilities.contains(
-                        CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA
-                    )
-                ) {
-                    false
-                } else if (capabilities.contains(
-                        CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE
-                    )
-                ) {
-                    true
-                } else {
-                    false
-                }
-
-
-            } catch (e: Exception) {
-                false
-            }
-        }.forEach { cameraIds2.add(it) }
-
-
         // Iterate over the list of cameras and return all the compatible ones
-        cameraIds2.forEach { id ->
-
+        cameraIdList.forEach { id ->
             Log.i("SELECTOR", "id: " + id)
             val characteristics = cameraManager.getCameraCharacteristics(id)
             val orientation = lensOrientationString(

@@ -100,11 +100,14 @@ class Cam : Service() {
 
             "new_view_state" -> {
 
-                val old = engine?.viewState!!
-                val new : CameraFragment.Companion.ViewState = intent.extras?.getParcelable("data")!!
+                val old = engine?.viewState?.cameraIndex
+                val parcelableViewState = intent.extras?.getParcelable<CameraFragment.Companion.ViewState>("data")
+                val new = parcelableViewState?.cameraIndex
                 Log.i("CAM", "new_view_state: " + new)
                 Log.i("CAM", "from:           " + old)
-                engine?.viewState =  new
+                parcelableViewState?.let {
+                    engine?.viewState = it
+                }
                 if (old != new) {
                     Log.i("CAM", "diff")
                     engine?.restart()
