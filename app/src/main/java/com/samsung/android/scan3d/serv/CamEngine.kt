@@ -10,6 +10,8 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.TotalCaptureResult
+import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
@@ -32,6 +34,7 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
+
 class CamEngine(val context: Context) {
 
     var http: HttpService? = null
@@ -86,7 +89,7 @@ class CamEngine(val context: Context) {
     var viewState: CameraFragment.Companion.ViewState = CameraFragment.Companion.ViewState(
         true,
         stream = false,
-        cameraId = "0",
+        cameraId = cameraList.first().cameraId,
         quality = 80,
         resolutionIndex = null
     )
@@ -133,14 +136,16 @@ class CamEngine(val context: Context) {
     private suspend fun openCamera(
         manager: CameraManager,
         cameraId: String,
+        logicalCameraId: String?,
         handler: Handler? = null
     ): CameraDevice = suspendCancellableCoroutine { cont ->
-        manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
+
+        val idToOpen = logicalCameraId ?: cameraId;
+        manager.openCamera(idToOpen, object : CameraDevice.StateCallback() {
             override fun onOpened(device: CameraDevice) = cont.resume(device)
 
             override fun onDisconnected(device: CameraDevice) {
                 Log.w("CamEngine", "Camera $cameraId has been disconnected")
-
             }
 
             override fun onError(device: CameraDevice, error: Int) {
@@ -165,22 +170,39 @@ class CamEngine(val context: Context) {
      */
     private suspend fun createCaptureSession(
         device: CameraDevice,
+        physicalCamId: String?,
         targets: List<Surface>,
         handler: Handler? = null
     ): CameraCaptureSession = suspendCoroutine { cont ->
+        val outputConfigs = mutableListOf<OutputConfiguration>();
+        targets.forEach {
+            outputConfigs.add(OutputConfiguration(it).apply {
+                // If physical camera id is not null, it's a logical cam, you should set it
+                if (physicalCamId != null) {
+                    setPhysicalCameraId(physicalCamId)
+                }
+            })
+        }
 
         // Create a capture session using the predefined targets; this also involves defining the
         // session state callback to be notified of when the session is ready
-        device.createCaptureSession(targets, object : CameraCaptureSession.StateCallback() {
+        val sessionConfiguration = SessionConfiguration(
+            SessionConfiguration.SESSION_REGULAR,
+            outputConfigs,
+            Executors.newSingleThreadExecutor(),
+            object : CameraCaptureSession.StateCallback() {
 
-            override fun onConfigured(session: CameraCaptureSession) = cont.resume(session)
+                override fun onConfigured(session: CameraCaptureSession) = cont.resume(session)
 
-            override fun onConfigureFailed(session: CameraCaptureSession) {
-                val exc = RuntimeException("Camera ${device.id} session configuration failed")
-                Log.e("CamEngine", exc.message, exc)
-                cont.resumeWithException(exc)
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    val exc = RuntimeException("Camera ${device.id} session configuration failed")
+                    Log.e("CamEngine", exc.message, exc)
+                    cont.resumeWithException(exc)
+                }
             }
-        }, handler)
+        )
+
+        device.createCaptureSession(sessionConfiguration)
     }
 
     suspend fun initializeCamera() {
@@ -212,18 +234,21 @@ class CamEngine(val context: Context) {
         resH = sizes[viewState.resolutionIndex!!].height
 
 
-
-        camera = openCamera(cameraManager, viewState.cameraId, cameraHandler)
+        val sensor = cameraList.find { it.cameraId == viewState.cameraId }!!
+        camera = openCamera(cameraManager, sensor.cameraId, sensor.logicalCameraId, cameraHandler)
         imageReader = ImageReader.newInstance(
             resW, resH, camOutPutFormat, 4
         )
         var targets = listOf(imageReader.surface)
         if (showLiveSurface) {
-
-
             targets = targets.plus(previewSurface!!)
         }
-        session = createCaptureSession(camera, targets, cameraHandler)
+        session = createCaptureSession(
+            camera,
+            if (sensor.logicalCameraId == null) null else sensor.cameraId,
+            targets,
+            cameraHandler
+        )
         val captureRequest = camera.createCaptureRequest(
             CameraDevice.TEMPLATE_RECORD //TEMPLATE_PREVIEW
         )
