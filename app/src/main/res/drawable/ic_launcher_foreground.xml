@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2020 The Android Open Source Project
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:autoMirrored="true"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#ffffff"
+        android:pathData="M54,56m-10,0a10,10 0,1 1,20 0a10,10 0,1 1,-20 0" />
+    <path
+        android:fillColor="#37474F"
+        android:pathData="M54,61C56.76,61 59,58.76 59,56C59,53.24 56.76,51 54,51C51.24,51 49,53.24 49,56C49,58.76 51.24,61 54,61Z" />
+    <path
+        android:fillColor="#546E7A"
+        android:pathData="M68.46,42.38C68.17,41.21 67.56,40.14 66.71,39.29C65.86,38.44 64.79,37.83 63.62,37.54C62.8,37.34 62,37.98 62,38.84C62,39.42 62.38,39.98 62.96,40.12C64.4,40.48 65.54,41.6 65.88,43.04C66.02,43.62 66.56,44 67.16,44C68.02,44 68.66,43.2 68.46,42.38Z" />
+    <path
+        android:fillColor="#78909C"
+        android:pathData="M63.2,34.74C67.4,35.28 70.74,38.6 71.26,42.8C71.34,43.48 71.9,44 72.58,44C73.36,44 74,43.32 73.9,42.54C73.57,39.89 72.36,37.42 70.47,35.53C68.58,33.64 66.11,32.43 63.46,32.1C62.68,32 62,32.64 62,33.42C62,34.1 62.52,34.66 63.2,34.74Z" />
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M64,46C64,43.8 62.2,42 60,42V38C60,36.9 59.1,36 58,36H49.76C48.64,36 47.56,36.48 46.8,37.3L44.34,40H38C35.8,40 34,41.8 34,44V68C34,70.2 35.8,72 38,72H70C72.2,72 74,70.2 74,68V50C74,47.8 72.2,46 70,46H64ZM54,65C49.04,65 45,60.96 45,56C45,51.04 49.04,47 54,47C58.96,47 63,51.04 63,56C63,60.96 58.96,65 54,65Z" />
+</vector>
